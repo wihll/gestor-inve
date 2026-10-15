@@ -24,4 +24,5 @@ Las pruebas de integración se marcan `Categoria=Integracion`: el job de Windows
 ## Consecuencias
 - El alta de empresas (onboarding) necesita un rol con `bypassrls`, porque la política de `empresas` exige que la sesión ya apunte a la empresa que se crea. **Pendiente de definir en H5.**
 - `IContextoTenant` hoy se registra fijo y vacío; en H5 pasa a deducirse del usuario autenticado.
-- Toda tabla nueva con `empresa_id` debe añadir su política RLS en la migración. Falta un test que falle si alguien olvida la política (**pendiente**).
+- Toda tabla nueva con `empresa_id` debe añadir su política RLS en la migración. Lo vigila `PoliticasRlsTests`, que **deriva la expectativa del modelo de EF**: cada entidad que implemente `IEntidadDeEmpresa` o `IRaizDeEmpresa` queda cubierta sin tocar la prueba, y falla si falta `enable`, falta `force`, no hay política o la política no consulta `gestorinve.empresa_id` (verificado saboteando una base de prueba).
+- `IRaizDeEmpresa` marca la entidad que *es* una empresa (`Empresa`): su política filtra por su propia clave, no por `empresa_id`, pero necesita la misma protección.

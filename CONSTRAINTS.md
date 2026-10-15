@@ -13,4 +13,5 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Arquitectura | `Core` sin dependencias; módulos no se referencian | NetArchTest |
 | Portabilidad | Build y pruebas unitarias verdes en Ubuntu y Windows | Matriz de CI |
 | Aislamiento multiempresa | RLS activo y probado contra PostgreSQL real con un rol sin privilegios | Job de integración (el CI verifica el rol y que las pruebas se ejecuten) |
+| Política RLS por tabla | Toda entidad `IEntidadDeEmpresa`/`IRaizDeEmpresa` con `enable` + `force` + política que consulta la sesión | `PoliticasRlsTests`, derivado del modelo de EF |
 | Código generado | Las migraciones de EF se marcan `generated_code`; no cuenta como supresión | `.editorconfig` + ADR 0003 |

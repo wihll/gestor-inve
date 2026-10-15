@@ -33,3 +33,13 @@ public interface IAuditable
 
     string? ActualizadoPor { get; }
 }
+
+/// <summary>
+/// Raíz del aislamiento: la entidad que <em>es</em> una empresa, no la que pertenece a una.
+/// Marca aparte de <see cref="IEntidadDeEmpresa"/> porque su política RLS filtra por su propia
+/// clave y no por <c>empresa_id</c>, pero necesita exactamente la misma protección.
+/// </summary>
+public interface IRaizDeEmpresa
+{
+    Guid Id { get; }
+}

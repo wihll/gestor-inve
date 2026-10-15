@@ -26,5 +26,6 @@ Pendiente de ratificar en [[decisiones/0001-stack]].
 - Aislamiento multiempresa en dos capas: filtro global de EF y **RLS** en PostgreSQL (`force row level security`). Detalle y consecuencias en [[decisiones/0003-persistencia-y-aislamiento]].
 - Interceptores: `InterceptorEmpresaEnSesion` (publica la empresa en la sesión de PostgreSQL) y `InterceptorAuditoria` (rastro de `IAuditable` y sellado de `EmpresaId`).
 - Migraciones en `src/GestorInve.Persistencia/Migraciones`; la fábrica de diseño vive en la Api, el único proyecto que ve todos los módulos.
-- `Core` añade los contratos puros `IReloj`, `IContextoTenant`, `IEntidadDeEmpresa`, `IAuditable`.
+- `Core` añade los contratos puros `IReloj`, `IContextoTenant`, `IEntidadDeEmpresa`, `IRaizDeEmpresa`, `IAuditable`.
+- `PoliticasRlsTests` deriva del modelo de EF qué tablas deben estar protegidas, así que una tabla nueva sin política RLS rompe el CI en vez de dejar de aislar en silencio.
 - Api: `/health` es liveness y no toca la base de datos; `/ready` sí la comprueba (verificado: con la base caída, `/health` 200 y `/ready` 503).

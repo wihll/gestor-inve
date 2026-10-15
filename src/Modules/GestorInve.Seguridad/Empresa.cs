@@ -6,7 +6,7 @@ namespace GestorInve.Seguridad;
 /// Empresa: la raíz del aislamiento multiempresa. No implementa <see cref="IEntidadDeEmpresa"/>
 /// porque no pertenece a otra empresa: <em>es</em> la empresa. Su propia política RLS la filtra por <c>id</c>.
 /// </summary>
-public class Empresa : IAuditable
+public class Empresa : IRaizDeEmpresa, IAuditable
 {
     private Empresa()
     {
