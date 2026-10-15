@@ -67,4 +67,58 @@ public class DineroTests
     {
         Assert.Equal("COP", new Dinero(1m, "cop").Moneda);
     }
+
+    [Fact]
+    public void Default_es_elemento_neutro_y_adopta_la_moneda_del_otro_operando()
+    {
+        Dinero total = default;
+
+        total += new Dinero(100m, "COP");
+        total += new Dinero(50m, "COP");
+
+        Assert.Equal(new Dinero(150m, "COP"), total);
+    }
+
+    [Fact]
+    public void Sumar_una_lista_desde_default_no_lanza()
+    {
+        Dinero[] lineas = [new(10m, "COP"), new(20m, "COP"), new(30m, "COP")];
+
+        var total = lineas.Aggregate(default(Dinero), (acc, linea) => acc + linea);
+
+        Assert.Equal(new Dinero(60m, "COP"), total);
+    }
+
+    [Fact]
+    public void Default_esta_indefinido_y_su_moneda_no_es_nula()
+    {
+        Dinero sinInicializar = default;
+
+        Assert.True(sinInicializar.EsIndefinido);
+        Assert.NotNull(sinInicializar.Moneda);
+        Assert.Equal(string.Empty, sinInicializar.Moneda);
+        Assert.Equal(0m, sinInicializar.Monto);
+    }
+
+    [Fact]
+    public void Operar_con_default_a_la_derecha_conserva_la_moneda()
+    {
+        Assert.Equal(new Dinero(5m, "COP"), new Dinero(5m, "COP") + default(Dinero));
+        Assert.Equal(new Dinero(5m, "COP"), new Dinero(5m, "COP") - default(Dinero));
+    }
+
+    [Fact]
+    public void Redondear_y_multiplicar_un_default_no_lanzan()
+    {
+        Dinero sinInicializar = default;
+
+        Assert.True(sinInicializar.Redondear().EsIndefinido);
+        Assert.True((sinInicializar * 3m).EsIndefinido);
+    }
+
+    [Fact]
+    public void ToString_de_un_default_no_deja_moneda_colgando()
+    {
+        Assert.Equal("0", default(Dinero).ToString());
+    }
 }

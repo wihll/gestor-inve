@@ -26,8 +26,18 @@ jobs:
       - name: Vulnerable packages
         shell: bash
         run: |
+          # pipefail + comprobación explícita: si el propio comando falla (restore roto,
+          # feed caído, .slnx no soportado) el paso debe fallar, no reportar "sin vulnerabilidades".
+          set -euo pipefail
           dotnet list package --vulnerable --include-transitive 2>&1 | tee vuln.txt
-          if grep -q "has the following vulnerable packages" vuln.txt; then exit 1; fi
+          if ! grep -q "The following sources were used:" vuln.txt; then
+            echo "::error::La auditoría de paquetes no produjo un informe válido."
+            exit 1
+          fi
+          if grep -q "has the following vulnerable packages" vuln.txt; then
+            echo "::error::Hay paquetes con vulnerabilidades conocidas."
+            exit 1
+          fi
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest'
         with:

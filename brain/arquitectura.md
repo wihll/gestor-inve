@@ -17,3 +17,6 @@ Pendiente de ratificar en [[decisiones/0001-stack]].
 - `src/GestorInve.Worker` — host vacío para jobs.
 - `tests/` — `Core.Tests` (TDD de dominio), `Api.Tests` (WebApplicationFactory), `Architecture.Tests` (NetArchTest: Core sin dependencias, módulos aislados, sin float/double en Core).
 - Pendiente: `Cantidad` y unidades (H6), FsCheck (H7), EF Core/Postgres (H2).
+
+## Invariante: `default(Dinero)`
+`Dinero` es un `struct`, así que `default` es inevitable (slots de arreglo, deserialización, acumuladores) y no pasa por el constructor. Se define como **cero sin moneda**: elemento neutro de la suma que adopta la moneda del otro operando (`EsIndefinido == true`, `Moneda == ""`, nunca `null`). Así `total += linea` sobre una lista funciona sin semilla con moneda, y dos monedas reales distintas siguen siendo error.
