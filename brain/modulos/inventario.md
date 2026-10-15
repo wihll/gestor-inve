@@ -3,4 +3,4 @@ estado: pendiente
 actualizado: 2026-10-15
 ---
 # Módulo inventario
-Responsabilidad, entidades, eventos, endpoints: por definir.
+Proyecto: `src/Modules/GestorInve.Inventario` (solo referencia a `GestorInve.Core`). Responsabilidad, entidades, eventos, endpoints: por definir.
