@@ -13,7 +13,7 @@ Regla: consultar aquí primero; solo después grep/leer fuentes. Cada nota tiene
 | `dominio/` | Glosario y reglas: kardex, costeo (PEPS/promedio), lotes, impuestos |
 | `modulos/` | Una nota por módulo: responsabilidad, entidades, eventos, API |
 | `normativa/` | DIAN, UBL 2.1, PUC, retenciones (fuente + fecha de verificación) |
-| `runbooks/` | Instalación, backup/restore, release, migraciones |
+| `runbooks/` | Instalación, backup/restore, release, migraciones, [activar graphify](runbooks/activar-graphify.md) |
 
 ## Convenciones del cerebro
 - Una idea por nota, <200 líneas; enlazar en vez de duplicar.
