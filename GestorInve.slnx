@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GestorInve.Api/GestorInve.Api.csproj" />
+    <Project Path="src/GestorInve.Core/GestorInve.Core.csproj" />
+    <Project Path="src/GestorInve.Worker/GestorInve.Worker.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/">
+    <Project Path="src/Modules/GestorInve.Catalogo/GestorInve.Catalogo.csproj" />
+    <Project Path="src/Modules/GestorInve.Compras/GestorInve.Compras.csproj" />
+    <Project Path="src/Modules/GestorInve.Contabilidad/GestorInve.Contabilidad.csproj" />
+    <Project Path="src/Modules/GestorInve.FacturaElectronica/GestorInve.FacturaElectronica.csproj" />
+    <Project Path="src/Modules/GestorInve.Inventario/GestorInve.Inventario.csproj" />
+    <Project Path="src/Modules/GestorInve.Seguridad/GestorInve.Seguridad.csproj" />
+    <Project Path="src/Modules/GestorInve.Terceros/GestorInve.Terceros.csproj" />
+    <Project Path="src/Modules/GestorInve.Ventas/GestorInve.Ventas.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GestorInve.Api.Tests/GestorInve.Api.Tests.csproj" />
+    <Project Path="tests/GestorInve.Architecture.Tests/GestorInve.Architecture.Tests.csproj" />
+    <Project Path="tests/GestorInve.Core.Tests/GestorInve.Core.Tests.csproj" />
+  </Folder>
+</Solution>

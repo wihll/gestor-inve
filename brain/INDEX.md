@@ -6,6 +6,7 @@ Regla: consultar aquí primero; solo después grep/leer fuentes. Cada nota tiene
 ## Mapa
 | Carpeta | Contenido |
 |---|---|
+| `arquitectura.md` | (ver estructura real en la sección H1) |
 | `plan-esqueleto.md` | Hitos H0-H10 para crear el proyecto y la Fase 1 |
 | `vision.md` | Objetivo, alcance, no-objetivos, licencia |
 | `arquitectura.md` | Stack, monolito modular, invariantes técnicas |

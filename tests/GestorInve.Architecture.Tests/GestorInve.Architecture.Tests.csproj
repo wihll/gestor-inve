@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GestorInve.Core\GestorInve.Core.csproj" />
+    <ProjectReference Include="..\..\src\Modules\GestorInve.Catalogo\GestorInve.Catalogo.csproj" />
+    <ProjectReference Include="..\..\src\Modules\GestorInve.Compras\GestorInve.Compras.csproj" />
+    <ProjectReference Include="..\..\src\Modules\GestorInve.Contabilidad\GestorInve.Contabilidad.csproj" />
+    <ProjectReference Include="..\..\src\Modules\GestorInve.FacturaElectronica\GestorInve.FacturaElectronica.csproj" />
+    <ProjectReference Include="..\..\src\Modules\GestorInve.Inventario\GestorInve.Inventario.csproj" />
+    <ProjectReference Include="..\..\src\Modules\GestorInve.Seguridad\GestorInve.Seguridad.csproj" />
+    <ProjectReference Include="..\..\src\Modules\GestorInve.Terceros\GestorInve.Terceros.csproj" />
+    <ProjectReference Include="..\..\src\Modules\GestorInve.Ventas\GestorInve.Ventas.csproj" />
+    <ProjectReference Include="..\..\src\GestorInve.Api\GestorInve.Api.csproj" />
+  </ItemGroup>
+
+</Project>

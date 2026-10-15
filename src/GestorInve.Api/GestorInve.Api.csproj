@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Modules\GestorInve.Catalogo\GestorInve.Catalogo.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Compras\GestorInve.Compras.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Contabilidad\GestorInve.Contabilidad.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.FacturaElectronica\GestorInve.FacturaElectronica.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Inventario\GestorInve.Inventario.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Seguridad\GestorInve.Seguridad.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Terceros\GestorInve.Terceros.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Ventas\GestorInve.Ventas.csproj" />
+    <ProjectReference Include="..\GestorInve.Core\GestorInve.Core.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+  </ItemGroup>
+</Project>
