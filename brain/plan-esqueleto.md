@@ -3,7 +3,7 @@ estado: propuesto
 actualizado: 2026-10-15
 ---
 # Plan de creación del proyecto (esqueleto + Fase 1)
-Supuestos (ratificar en [[decisiones/0001-stack]] y ADR 0002 licencia): .NET 9 + PostgreSQL 16 + React/TS, AGPLv3. Metodología: spec-driven → planning → incremental + TDD → review.
+Supuestos (ratificar en [[decisiones/0001-stack]] y ADR 0002 licencia): .NET 10 + PostgreSQL 16 + React/TS, AGPLv3. Metodología: spec-driven → planning → incremental + TDD → review.
 
 ## Hitos (cada uno = 1 PR pequeño, CI verde)
 | # | Hito | Entregable | Criterio de salida |

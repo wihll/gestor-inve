@@ -1,5 +1,10 @@
-graphify-out/cache/
+*.log
+*.user
 .venv/
+.vs/
+TestResults/
 bin/
-obj/
+coverage/
+graphify-out/cache/
 node_modules/
+obj/
