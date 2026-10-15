@@ -32,21 +32,13 @@ public sealed class BaseDatosFixture : IAsyncLifetime
 
     public Task DisposeAsync() => Task.CompletedTask;
 
-    /// <summary>Contexto como lo arma la aplicación: con los dos interceptores.</summary>
-    public GestorInveDbContext Crear(Guid? empresaId, IReloj? reloj = null, string usuario = "pruebas")
-    {
-        var tenant = new ContextoTenantFijo(empresaId, usuario);
-
-        var opciones = new DbContextOptionsBuilder<GestorInveDbContext>()
-            .UseNpgsql(Cadena)
-            .UseSnakeCaseNamingConvention()
-            .AddInterceptors(
-                new InterceptorAuditoria(reloj ?? new RelojSistema(), tenant),
-                new InterceptorEmpresaEnSesion(tenant))
-            .Options;
-
-        return new GestorInveDbContext(opciones, tenant, [new ModuloSeguridadPersistencia()]);
-    }
+    /// <summary>
+    /// Usa la misma fábrica que la aplicación: si el cableado de producción cambia, estas
+    /// pruebas lo ejercitan en vez de comprobar una configuración paralela.
+    /// </summary>
+    public GestorInveDbContext Crear(Guid? empresaId, IReloj? reloj = null, string usuario = "pruebas") =>
+        new FabricaContextoEmpresa(Cadena, reloj ?? new RelojSistema(), [new ModuloSeguridadPersistencia()])
+            .Crear(empresaId, usuario);
 
     /// <summary>Crea una empresa y devuelve su id. El alta se hace con la sesión puesta en ella misma.</summary>
     public async Task<Guid> CrearEmpresaAsync(string nombre)

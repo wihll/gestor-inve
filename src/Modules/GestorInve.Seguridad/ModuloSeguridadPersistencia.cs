@@ -39,5 +39,78 @@ public sealed class ModuloSeguridadPersistencia : IModuloPersistencia
             e.Property(x => x.ActualizadoPor).HasMaxLength(100);
             e.HasIndex(x => new { x.EmpresaId, x.CreadoEn });
         });
+
+        modelo.Entity<Usuario>(e =>
+        {
+            e.ToTable("usuarios", Esquema);
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EmpresaId).IsRequired();
+            e.Property(x => x.Correo).HasMaxLength(320).IsRequired();
+            e.Property(x => x.NombreCompleto).HasMaxLength(200).IsRequired();
+            e.Property(x => x.HashContrasena).HasMaxLength(512).IsRequired();
+            e.Property(x => x.Activo).IsRequired();
+            e.Property(x => x.IntentosFallidos).IsRequired();
+            e.Property(x => x.CreadoPor).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ActualizadoPor).HasMaxLength(100);
+
+            // El correo es único dentro de la empresa, no globalmente: la misma persona puede
+            // existir en dos empresas distintas del mismo despliegue.
+            e.HasIndex(x => new { x.EmpresaId, x.Correo }).IsUnique();
+
+            e.HasMany(x => x.Asignaciones)
+                .WithOne()
+                .HasForeignKey(a => a.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.Navigation(x => x.Asignaciones).UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            // `Roles` es una proyección de las asignaciones, no una navegación: sin esto EF la
+            // descubre por convención e intenta escribir en una lista de solo lectura.
+            e.Ignore(x => x.Roles);
+        });
+
+        modelo.Entity<Rol>(e =>
+        {
+            e.ToTable("roles", Esquema);
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EmpresaId).IsRequired();
+            e.Property(x => x.Nombre).HasMaxLength(100).IsRequired();
+            e.Property<List<string>>("permisos").HasColumnName("permisos").HasColumnType("text[]").IsRequired();
+            e.Ignore(x => x.Permisos);
+            e.Property(x => x.CreadoPor).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ActualizadoPor).HasMaxLength(100);
+            e.HasIndex(x => new { x.EmpresaId, x.Nombre }).IsUnique();
+        });
+
+        modelo.Entity<UsuarioRol>(e =>
+        {
+            e.ToTable("usuario_roles", Esquema);
+            e.HasKey(x => new { x.UsuarioId, x.RolId });
+            e.Property(x => x.EmpresaId).IsRequired();
+            e.HasOne(x => x.Rol).WithMany().HasForeignKey(x => x.RolId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelo.Entity<TokenRefresco>(e =>
+        {
+            e.ToTable("tokens_refresco", Esquema);
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EmpresaId).IsRequired();
+            e.Property(x => x.UsuarioId).IsRequired();
+            e.Property(x => x.HashToken).HasMaxLength(64).IsRequired();
+            e.Property(x => x.FamiliaId).IsRequired();
+
+            // Se busca por hash en cada refresco; único para que no haya dos filas por token.
+            e.HasIndex(x => x.HashToken).IsUnique();
+            e.HasIndex(x => x.FamiliaId);
+            e.HasOne<Usuario>().WithMany().HasForeignKey(x => x.UsuarioId).OnDelete(DeleteBehavior.Cascade);
+        });
+        modelo.Entity<DirectorioEmpresa>(e =>
+        {
+            e.ToTable("directorio_empresas", Esquema);
+            e.HasKey(x => x.Nit);
+            e.Property(x => x.Nit).HasMaxLength(20);
+            e.Property(x => x.EmpresaId).IsRequired();
+            e.Property(x => x.Activa).IsRequired();
+        });
     }
 }
