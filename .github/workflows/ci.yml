@@ -8,8 +8,13 @@ on:
 permissions:
   contents: read
 
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
 jobs:
-  build-test:
+  unitarias:
+    name: Unitarias (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -22,8 +27,13 @@ jobs:
           global-json-file: global.json
       - run: dotnet restore
       - run: dotnet build --no-restore -warnaserror
-      - run: dotnet test --no-build --collect:"XPlat Code Coverage" --results-directory ./coverage
-      - name: Vulnerable packages
+      - name: Pruebas sin base de datos
+        run: dotnet test --no-build --filter "Categoria!=Integracion"
+      - name: Cobertura del dominio (umbral bloqueante)
+        run: >
+          dotnet test tests/GestorInve.Core.Tests --no-build
+          /p:CollectCoverage=true /p:ThresholdType=line /p:Threshold=90
+      - name: Paquetes vulnerables
         shell: bash
         run: |
           # pipefail + comprobación explícita: si el propio comando falla (restore roto,
@@ -38,8 +48,51 @@ jobs:
             echo "::error::Hay paquetes con vulnerabilidades conocidas."
             exit 1
           fi
-      - uses: actions/upload-artifact@v4
-        if: matrix.os == 'ubuntu-latest'
+
+  integracion:
+    name: Integración (PostgreSQL)
+    # Solo Linux: los contenedores de servicio de Actions no existen en los runners de Windows.
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
         with:
-          name: coverage
-          path: coverage
+          global-json-file: global.json
+      - name: Rol sin privilegios para la aplicación
+        # Imprescindible: un superusuario (o cualquier rol con BYPASSRLS) ignora las políticas
+        # RLS, así que probar con el usuario por defecto de la imagen daría una garantía falsa.
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
+            -c "create role gestorinve login password 'gestorinve';" \
+            -c "create database gestorinve owner gestorinve;"
+          test "$(psql -h 127.0.0.1 -U postgres -tAc \
+            "select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'")" = "f"
+      - run: dotnet restore
+      - run: dotnet build --no-restore -warnaserror
+      - name: Pruebas de integración
+        env:
+          GESTORINVE_CONEXION_TEST: Host=127.0.0.1;Port=5432;Database=gestorinve;Username=gestorinve;Password=gestorinve
+        run: |
+          # `dotnet test` sale en 0 cuando el filtro no encuentra nada: sin este guardia, renombrar
+          # la etiqueta dejaría las pruebas de aislamiento sin ejecutar y el CI seguiría verde.
+          set -euo pipefail
+          dotnet test --no-build --filter "Categoria=Integracion" | tee integracion.log
+          ejecutadas=$(grep -oE 'Passed:[[:space:]]+[0-9]+' integracion.log \
+            | grep -oE '[0-9]+' | awk '{s += $1} END {print s + 0}')
+          echo "Pruebas de integración ejecutadas: ${ejecutadas:-0}"
+          if [ "${ejecutadas:-0}" -lt 1 ]; then
+            echo "::error::El filtro no ejecutó ninguna prueba de integración."
+            exit 1
+          fi

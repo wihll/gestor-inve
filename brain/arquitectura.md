@@ -20,3 +20,11 @@ Pendiente de ratificar en [[decisiones/0001-stack]].
 
 ## Invariante: `default(Dinero)`
 `Dinero` es un `struct`, así que `default` es inevitable (slots de arreglo, deserialización, acumuladores) y no pasa por el constructor. Se define como **cero sin moneda**: elemento neutro de la suma que adopta la moneda del otro operando (`EsIndefinido == true`, `Moneda == ""`, nunca `null`). Así `total += linea` sobre una lista funciona sin semilla con moneda, y dos monedas reales distintas siguen siendo error.
+
+## Persistencia (H2)
+- `src/GestorInve.Persistencia` — EF Core 10 + Npgsql, `snake_case`, contexto único. Referencia solo a `Core`.
+- Aislamiento multiempresa en dos capas: filtro global de EF y **RLS** en PostgreSQL (`force row level security`). Detalle y consecuencias en [[decisiones/0003-persistencia-y-aislamiento]].
+- Interceptores: `InterceptorEmpresaEnSesion` (publica la empresa en la sesión de PostgreSQL) y `InterceptorAuditoria` (rastro de `IAuditable` y sellado de `EmpresaId`).
+- Migraciones en `src/GestorInve.Persistencia/Migraciones`; la fábrica de diseño vive en la Api, el único proyecto que ve todos los módulos.
+- `Core` añade los contratos puros `IReloj`, `IContextoTenant`, `IEntidadDeEmpresa`, `IAuditable`.
+- Api: `/health` es liveness y no toca la base de datos; `/ready` sí la comprueba (verificado: con la base caída, `/health` 200 y `/ready` 503).

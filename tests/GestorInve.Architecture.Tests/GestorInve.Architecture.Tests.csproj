@@ -27,6 +27,7 @@
     <ProjectReference Include="..\..\src\Modules\GestorInve.Terceros\GestorInve.Terceros.csproj" />
     <ProjectReference Include="..\..\src\Modules\GestorInve.Ventas\GestorInve.Ventas.csproj" />
     <ProjectReference Include="..\..\src\GestorInve.Api\GestorInve.Api.csproj" />
+    <ProjectReference Include="..\..\src\GestorInve.Persistencia\GestorInve.Persistencia.csproj" />
   </ItemGroup>
 
 </Project>

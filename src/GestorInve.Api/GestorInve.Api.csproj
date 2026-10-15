@@ -10,6 +10,7 @@
     <ProjectReference Include="..\Modules\GestorInve.Terceros\GestorInve.Terceros.csproj" />
     <ProjectReference Include="..\Modules\GestorInve.Ventas\GestorInve.Ventas.csproj" />
     <ProjectReference Include="..\GestorInve.Core\GestorInve.Core.csproj" />
+    <ProjectReference Include="..\GestorInve.Persistencia\GestorInve.Persistencia.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -17,5 +18,10 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
   </ItemGroup>
 </Project>

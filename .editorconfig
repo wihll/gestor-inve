@@ -22,3 +22,11 @@ dotnet_sort_system_directives_first = true
 csharp_style_namespace_declarations = file_scoped:warning
 csharp_style_var_for_built_in_types = false:suggestion
 dotnet_diagnostic.CA1707.severity = none
+
+# Las migraciones las escribe EF Core, no nosotros: se tratan como código generado.
+# No es una supresión sobre código propio (ver CONSTRAINTS.md y ADR 0003).
+[**/Migraciones/*.cs]
+generated_code = true
+dotnet_diagnostic.IDE0161.severity = none
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA1062.severity = none

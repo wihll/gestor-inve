@@ -42,6 +42,26 @@ public class ArquitecturaTests
         Assert.True(resultado.IsSuccessful, Fallos(resultado));
     }
 
+    /// <summary>
+    /// El dominio no debe saber cómo se guarda: ni EF Core, ni Npgsql, ni el proyecto de
+    /// persistencia. Si Core arrastra el ORM, las reglas de negocio dejan de ser comprobables
+    /// sin base de datos y el modelo acaba dictado por el esquema.
+    /// </summary>
+    [Fact]
+    public void Core_no_depende_del_ORM_ni_de_la_persistencia()
+    {
+        string[] prohibidos =
+        [
+            "Microsoft.EntityFrameworkCore",
+            "Npgsql",
+            "GestorInve.Persistencia",
+        ];
+
+        var resultado = Types.InAssembly(Core).ShouldNot().HaveDependencyOnAny(prohibidos).GetResult();
+
+        Assert.True(resultado.IsSuccessful, Fallos(resultado));
+    }
+
     [Fact]
     public void Core_no_expone_float_ni_double()
     {
