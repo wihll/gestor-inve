@@ -6,9 +6,10 @@ Regla: consultar aquí primero; solo después grep/leer fuentes. Cada nota tiene
 ## Mapa
 | Carpeta | Contenido |
 |---|---|
+| `plan-esqueleto.md` | Hitos H0-H10 para crear el proyecto y la Fase 1 |
 | `vision.md` | Objetivo, alcance, no-objetivos, licencia |
 | `arquitectura.md` | Stack, monolito modular, invariantes técnicas |
-| `roadmap.md` | Fases 1-4 con criterios de salida |
+
 | `decisiones/` | ADRs numerados (`0001-...md`), inmutables; se supersede, no se edita |
 | `dominio/` | Glosario y reglas: kardex, costeo (PEPS/promedio), lotes, impuestos |
 | `modulos/` | Una nota por módulo: responsabilidad, entidades, eventos, API |
