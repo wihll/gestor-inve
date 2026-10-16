@@ -80,6 +80,48 @@ public sealed class ModuloInventarioPersistencia : IModuloPersistencia
             e.HasOne<Variante>().WithMany().HasForeignKey(x => x.VarianteId).OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelo.Entity<ConfiguracionInventario>(e =>
+        {
+            e.ToTable("configuracion", Esquema);
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EmpresaId).IsRequired();
+            e.Property(x => x.Metodo).HasConversion<string>().HasMaxLength(30).IsRequired();
+            e.Property(x => x.ActualizadoEn).IsRequired();
+
+            // Una sola fila por empresa: dos configuraciones serían dos métodos de costeo a la
+            // vez, y el saldo quedaría valorado según cuál leyera cada consulta.
+            e.HasIndex(x => x.EmpresaId).IsUnique();
+        });
+
+        modelo.Entity<CapaDeCosto>(e =>
+        {
+            e.ToTable("capas_costo", Esquema);
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EmpresaId).IsRequired();
+            e.Property(x => x.VarianteId).IsRequired();
+            e.Property(x => x.BodegaId).IsRequired();
+            e.Property(x => x.UbicacionId).IsRequired();
+            e.Property(x => x.MovimientoId).IsRequired();
+            e.Property(x => x.CantidadInicial).HasColumnType(TipoCantidad).IsRequired();
+            e.Property(x => x.CantidadRestante).HasColumnType(TipoCantidad).IsRequired();
+            e.Property(x => x.UnidadCodigo).HasMaxLength(10).IsRequired();
+            e.Property(x => x.UnidadDecimales).IsRequired();
+            e.Property(x => x.CostoUnitario).HasColumnType(TipoCosto).IsRequired();
+            e.Property(x => x.Moneda).HasMaxLength(3).IsRequired();
+            e.Property(x => x.Fecha).IsRequired();
+
+            // PEPS consume por antigüedad dentro de la celda. El índice lleva `Fecha` e `Id`
+            // porque dos movimientos pueden compartir fecha y el orden tiene que ser total:
+            // si no lo fuera, el costo de ventas dependería del plan de consulta.
+            e.HasIndex(x => new { x.VarianteId, x.BodegaId, x.UbicacionId, x.LoteId, x.Fecha, x.Id });
+
+            e.HasOne<Variante>().WithMany().HasForeignKey(x => x.VarianteId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Bodega>().WithMany().HasForeignKey(x => x.BodegaId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Ubicacion>().WithMany().HasForeignKey(x => x.UbicacionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Lote>().WithMany().HasForeignKey(x => x.LoteId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Movimiento>().WithMany().HasForeignKey(x => x.MovimientoId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelo.Entity<Movimiento>(e =>
         {
             e.ToTable("movimientos", Esquema);

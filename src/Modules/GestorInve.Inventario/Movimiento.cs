@@ -83,7 +83,8 @@ public class Movimiento : IEntidadDeEmpresa
         DateTimeOffset fecha,
         string usuario,
         string? referencia,
-        string? observacion)
+        string? observacion,
+        Dinero? costoTotal)
     {
         Id = Guid.CreateVersion7();
         Tipo = tipo;
@@ -98,7 +99,12 @@ public class Movimiento : IEntidadDeEmpresa
 
         CostoUnitario = costoUnitario.Monto;
         Moneda = costoUnitario.Moneda;
-        CostoTotal = (costoUnitario * cantidad.Valor).Redondear().Monto;
+
+        // El total se puede imponer, y bajo PEPS hay que hacerlo: el costo de una salida es la
+        // suma exacta de las capas consumidas (10×1.000 + 20×2.000 = 50.000), mientras que el
+        // unitario es el ponderado que se deriva de él (1.666,666667) y no lo reproduce al
+        // multiplicar. Lo que tiene que cuadrar con la contabilidad es el total, no el unitario.
+        CostoTotal = (costoTotal ?? (costoUnitario * cantidad.Valor)).Redondear().Monto;
 
         SaldoCantidadDespues = saldoDespues.Cantidad.Valor;
         SaldoCostoPromedioDespues = saldoDespues.CostoPromedio.Monto;
@@ -196,8 +202,9 @@ public class Movimiento : IEntidadDeEmpresa
         Guid? trasladoId = null,
         Guid? movimientoReversadoId = null,
         bool forzadoNegativo = false,
-        Guid? operacionId = null) =>
-        new(tipo, varianteId, bodegaId, ubicacionId, loteId, cantidad, costoUnitario, saldoDespues, fecha, usuario, referencia, observacion)
+        Guid? operacionId = null,
+        Dinero? costoTotal = null) =>
+        new(tipo, varianteId, bodegaId, ubicacionId, loteId, cantidad, costoUnitario, saldoDespues, fecha, usuario, referencia, observacion, costoTotal)
         {
             TrasladoId = trasladoId,
             MovimientoReversadoId = movimientoReversadoId,

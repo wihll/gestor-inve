@@ -48,6 +48,10 @@ public sealed record PeticionTraslado(
 
 public sealed record PeticionLote(string Codigo, DateOnly? Vencimiento, bool EsSerial);
 
+public sealed record PeticionConfiguracion(MetodoCosteo Metodo);
+
+public sealed record RespuestaConfiguracion(MetodoCosteo Metodo, bool SePuedeCambiar, DateTimeOffset ActualizadoEn);
+
 public sealed record RespuestaLote(
     Guid Id,
     Guid VarianteId,
@@ -109,6 +113,7 @@ public static class EndpointsInventario
         var grupo = rutas.MapGroup("/inventario").WithTags("Inventario");
 
         MapBodegas(grupo);
+        MapConfiguracion(grupo);
         MapLotes(grupo);
         MapMovimientos(grupo);
         MapConsultas(grupo);
@@ -184,6 +189,42 @@ public static class EndpointsInventario
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Añade una ubicación a una bodega.");
+    }
+
+    private static void MapConfiguracion(RouteGroupBuilder grupo)
+    {
+        grupo.MapGet("/configuracion", async (ServicioMovimientos servicio, CancellationToken ct) =>
+        {
+            var (metodo, sePuedeCambiar, actualizadoEn) = await servicio.LeerMetodoAsync(ct);
+
+            return Results.Ok(new RespuestaConfiguracion(metodo, sePuedeCambiar, actualizadoEn));
+        })
+            .RequireAuthorization(Permiso.InventarioLeer)
+            .Produces<RespuestaConfiguracion>(StatusCodes.Status200OK)
+            .WithSummary("Método de costeo de la empresa y si todavía se puede cambiar.");
+
+        grupo.MapPut("/configuracion", async (
+            PeticionConfiguracion peticion,
+            ServicioMovimientos servicio,
+            CancellationToken ct) =>
+        {
+            // La regla «no se cambia con movimientos» vive en el servicio, no aquí: así una
+            // importación o un script tampoco la pueden saltar. Ver ADR 0010.
+            var (exitoso, error, metodo) = await servicio.FijarMetodoAsync(peticion.Metodo, ct);
+
+            if (!exitoso)
+            {
+                return Results.Problem(detail: error, statusCode: StatusCodes.Status409Conflict);
+            }
+
+            var (_, sePuedeCambiar, actualizadoEn) = await servicio.LeerMetodoAsync(ct);
+
+            return Results.Ok(new RespuestaConfiguracion(metodo, sePuedeCambiar, actualizadoEn));
+        })
+            .RequireAuthorization(Permiso.InventarioAjustar)
+            .Produces<RespuestaConfiguracion>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithSummary("Fija el método de costeo. Solo antes del primer movimiento.");
     }
 
     private static void MapLotes(RouteGroupBuilder grupo)

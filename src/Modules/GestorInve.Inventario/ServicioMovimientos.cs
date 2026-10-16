@@ -123,13 +123,14 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
         }
 
         var fechaMovimiento = solicitud.Fecha ?? reloj.Ahora;
+        var metodo = await MetodoAsync(ct);
 
         // Una salida sin lote de un producto con lotes significa «elige tú»: FEFO. Un serial no
         // entra por aquí, porque elegir un serial automáticamente no tiene sentido: quien
         // despacha una unidad identificada sabe cuál es.
         if (contexto.ExigeLote && !contexto.ExigeSerial && solicitud.LoteId is null && !solicitud.Tipo.Suma())
         {
-            var fefo = await SalidaFefoAsync(contexto, solicitud, fechaMovimiento, ct);
+            var fefo = await SalidaFefoAsync(contexto, solicitud, fechaMovimiento, metodo, ct);
 
             if (fefo.Exitoso)
             {
@@ -162,13 +163,16 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
         }
 
         var existencia = await BloquearExistenciaAsync(contexto, ct);
-        var saldo = existencia.Saldo();
+        var costeo = await CargarCosteoAsync(contexto, existencia, metodo, ct);
+        var saldoAntes = existencia.Saldo();
 
+        SaldoValorizado saldo;
         Dinero costoUnitario;
+        Dinero? costoTotal = null;
 
         if (solicitud.Tipo.Suma())
         {
-            // Una entrada necesita costo; un ajuste positivo puede heredar el promedio vigente.
+            // Una entrada necesita costo; un ajuste positivo puede heredar el costo vigente.
             if (solicitud.CostoUnitario is { } costo)
             {
                 if (costo < 0m)
@@ -180,9 +184,9 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
 
                 costoUnitario = new Dinero(costo, MonedaBase);
             }
-            else if (solicitud.Tipo is TipoMovimiento.AjustePositivo && saldo.Cantidad.Valor > 0m)
+            else if (solicitud.Tipo is TipoMovimiento.AjustePositivo && saldoAntes.Cantidad.Valor > 0m)
             {
-                costoUnitario = saldo.CostoPromedio;
+                costoUnitario = costeo.CostoDeSalida();
             }
             else
             {
@@ -191,30 +195,24 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
                     "Una entrada sin existencias previas necesita su costo unitario.");
             }
 
-            saldo = saldo.AplicarEntrada(cantidad, costoUnitario);
+            saldo = costeo.Entrada(cantidad, costoUnitario);
         }
         else
         {
-            costoUnitario = saldo.CostoDeSalida();
+            var excede = cantidad.Valor > saldoAntes.Cantidad.Valor;
 
-            if (cantidad.Valor > saldo.Cantidad.Valor)
+            if (excede && !permitirNegativo)
             {
-                if (!permitirNegativo)
-                {
-                    return ResultadoMovimiento.Error(
-                        FalloMovimiento.SinExistencias,
-                        $"No hay existencias suficientes: hay {saldo.Cantidad.Valor} y se piden {cantidad.Valor}.");
-                }
+                return ResultadoMovimiento.Error(
+                    FalloMovimiento.SinExistencias,
+                    $"No hay existencias suficientes: hay {saldoAntes.Cantidad.Valor} y se piden {cantidad.Valor}.");
+            }
 
-                saldo = saldo.AplicarSalidaForzada(cantidad);
-            }
-            else
-            {
-                saldo = saldo.AplicarSalida(cantidad);
-            }
+            var resultado = costeo.Salida(cantidad, forzar: excede);
+            (saldo, costoUnitario, costoTotal) = (resultado.Saldo, resultado.CostoUnitario, resultado.CostoTotal);
         }
 
-        var forzado = !solicitud.Tipo.Suma() && existencia.Saldo().Cantidad.Valor < cantidad.Valor;
+        var forzado = !solicitud.Tipo.Suma() && saldoAntes.Cantidad.Valor < cantidad.Valor;
 
         var movimiento = Movimiento.Registrar(
             solicitud.Tipo,
@@ -229,10 +227,16 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             tenant.Usuario,
             solicitud.Referencia,
             solicitud.Observacion,
-            forzadoNegativo: forzado);
+            forzadoNegativo: forzado,
+            costoTotal: costoTotal);
 
         db.Add(movimiento);
         existencia.Aplicar(saldo, reloj.Ahora);
+
+        foreach (var capa in costeo.CapasDe(movimiento, contexto))
+        {
+            db.Add(capa);
+        }
 
         await db.SaveChangesAsync(ct);
         await transaccion.CommitAsync(ct);
@@ -257,6 +261,7 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
         ContextoCelda contexto,
         SolicitudMovimiento solicitud,
         DateTimeOffset fecha,
+        MetodoCosteo metodo,
         CancellationToken ct)
     {
         var dia = DateOnly.FromDateTime(fecha.UtcDateTime);
@@ -320,9 +325,11 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
                 return ResultadoMovimiento.Error(FalloMovimiento.DatosInvalidos, error);
             }
 
-            var saldo = existencia.Saldo();
-            var costo = saldo.CostoDeSalida();
-            var despues = saldo.AplicarSalida(cantidad);
+            // Cada celda es un lote distinto, así que tiene sus propias capas: el costeo se carga
+            // por celda y no una vez para todo el reparto.
+            var costeo = await CargarCosteoAsync(contexto.ConLote(existencia.LoteId), existencia, metodo, ct);
+            var resultado = costeo.Salida(cantidad, forzar: false);
+            var (despues, costo, costoTotal) = (resultado.Saldo, resultado.CostoUnitario, resultado.CostoTotal);
 
             var asiento = Movimiento.Registrar(
                 solicitud.Tipo,
@@ -337,7 +344,8 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
                 tenant.Usuario,
                 solicitud.Referencia,
                 solicitud.Observacion,
-                operacionId: operacionId);
+                operacionId: operacionId,
+                costoTotal: costoTotal);
 
             db.Add(asiento);
             existencia.Aplicar(despues, reloj.Ahora);
@@ -440,12 +448,23 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
                 $"No hay existencias suficientes en el origen: hay {saldoOrigen.Cantidad.Valor} y se piden {cantidad.Valor}.");
         }
 
-        var costo = saldoOrigen.CostoDeSalida();
+        var metodo = await MetodoAsync(ct);
+        var costeoOrigen = await CargarCosteoAsync(origen, existenciaOrigen, metodo, ct);
+        var costeoDestino = await CargarCosteoAsync(destino, existenciaDestino, metodo, ct);
+
         var trasladoId = Guid.CreateVersion7();
         var fecha = solicitud.Fecha ?? reloj.Ahora;
 
-        var saldoOrigenDespues = saldoOrigen.AplicarSalida(cantidad);
-        var saldoDestinoDespues = existenciaDestino.Saldo().AplicarEntrada(cantidad, costo);
+        var salidaOrigen = costeoOrigen.Salida(cantidad, forzar: false);
+        var costo = salidaOrigen.CostoUnitario;
+        var saldoOrigenDespues = salidaOrigen.Saldo;
+
+        // El destino recibe los **tramos** que salieron, cada uno con su costo y su antigüedad,
+        // en vez de una sola entrada al costo ponderado. Mover mercancía de bodega no es un hecho
+        // económico: no debe cambiar lo que costará cada unidad al salir de verdad.
+        var saldoDestinoDespues = salidaOrigen.Consumido.Count > 0
+            ? costeoDestino.RecibirTramos(salidaOrigen.Consumido, costo)
+            : costeoDestino.Entrada(cantidad, costo);
 
         var salida = Movimiento.Registrar(
             TipoMovimiento.TrasladoSalida,
@@ -460,7 +479,8 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             tenant.Usuario,
             solicitud.Referencia,
             solicitud.Observacion,
-            trasladoId);
+            trasladoId,
+            costoTotal: salidaOrigen.CostoTotal);
 
         var entrada = Movimiento.Registrar(
             TipoMovimiento.TrasladoEntrada,
@@ -475,12 +495,18 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             tenant.Usuario,
             solicitud.Referencia,
             solicitud.Observacion,
-            trasladoId);
+            trasladoId,
+            costoTotal: salidaOrigen.CostoTotal);
 
         db.Add(salida);
         db.Add(entrada);
         existenciaOrigen.Aplicar(saldoOrigenDespues, reloj.Ahora);
         existenciaDestino.Aplicar(saldoDestinoDespues, reloj.Ahora);
+
+        foreach (var capa in costeoDestino.CapasDe(entrada, destino))
+        {
+            db.Add(capa);
+        }
 
         await db.SaveChangesAsync(ct);
         await transaccion.CommitAsync(ct);
@@ -527,32 +553,47 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
         contexto = contexto.ConLote(original.LoteId);
 
         var existencia = await BloquearExistenciaAsync(contexto, ct);
-        var saldo = existencia.Saldo();
+        var metodo = await MetodoAsync(ct);
+        var costeo = await CargarCosteoAsync(contexto, existencia, metodo, ct);
+
+        var saldoAntes = existencia.Saldo();
         var cantidad = original.ComoCantidad();
         var tipo = original.Tipo.Opuesto();
+
+        // La reversa usa el costo **del asiento original**, no el vigente: deshacer una salida
+        // devuelve la mercancía al costo con el que salió. Eso vale para los dos métodos.
         var costo = original.ComoCostoUnitario();
 
+        SaldoValorizado saldo;
+        Dinero? costoTotal = null;
         var forzado = false;
 
         if (tipo.Suma())
         {
-            saldo = saldo.AplicarEntrada(cantidad, costo);
-        }
-        else if (cantidad.Valor > saldo.Cantidad.Valor)
-        {
-            if (!permitirNegativo)
-            {
-                return ResultadoMovimiento.Error(
-                    FalloMovimiento.SinExistencias,
-                    $"Reversar dejaría el saldo negativo: hay {saldo.Cantidad.Valor} y habría que sacar {cantidad.Valor}.");
-            }
-
-            saldo = saldo.AplicarSalidaForzada(cantidad);
-            forzado = true;
+            // Bajo PEPS la capa que repone la reversa lleva la **fecha del asiento original**, no
+            // la de hoy: si llevara la de hoy se iría al final de la cola y la mercancía devuelta
+            // saldría después de lo que entró entretanto, que es justo lo contrario de PEPS.
+            saldo = costeo.RecibirTramos([new TramoConsumido(cantidad, costo, original.Fecha)], costo);
         }
         else
         {
-            saldo = saldo.AplicarSalida(cantidad);
+            var excede = cantidad.Valor > saldoAntes.Cantidad.Valor;
+
+            if (excede && !permitirNegativo)
+            {
+                return ResultadoMovimiento.Error(
+                    FalloMovimiento.SinExistencias,
+                    $"Reversar dejaría el saldo negativo: hay {saldoAntes.Cantidad.Valor} y habría que sacar {cantidad.Valor}.");
+            }
+
+            // Reversar una **entrada** bajo PEPS consume por antigüedad, como cualquier salida, y
+            // no deshace exactamente la capa que creó aquella entrada: si ya se consumió en parte,
+            // esas salidas se asentaron con ese costo y el libro es inmutable. El valor total se
+            // conserva; la composición de las capas no se puede reconstruir, y se asume.
+            var resultado = costeo.Salida(cantidad, forzar: excede);
+            saldo = resultado.Saldo;
+            costoTotal = resultado.CostoTotal;
+            forzado = excede;
         }
 
         var reversa = Movimiento.Registrar(
@@ -570,10 +611,16 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             observacion ?? $"Reversa de {original.Id}",
             original.TrasladoId,
             movimientoId,
-            forzado);
+            forzado,
+            costoTotal: costoTotal);
 
         db.Add(reversa);
         existencia.Aplicar(saldo, reloj.Ahora);
+
+        foreach (var capa in costeo.CapasDe(reversa, contexto))
+        {
+            db.Add(capa);
+        }
 
         await db.SaveChangesAsync(ct);
         await transaccion.CommitAsync(ct);
@@ -775,6 +822,307 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
                 FalloMovimiento.SerialInvalido,
                 $"El serial {lote.Codigo} ya tiene existencia: un serial no puede estar en dos sitios.")
             : null;
+    }
+
+    /// <summary>
+    /// Fija el método de costeo de la empresa. **Falla si ya hay movimientos registrados.**
+    ///
+    /// La regla vive aquí y no en el endpoint a propósito: un segundo llamador —una importación,
+    /// un script de migración de datos— la saltaría sin enterarse. PEPS y promedio dan costos de
+    /// salida distintos para la misma historia, así que cambiarlo recalcularía costos ya
+    /// asentados, y el kardex es inmutable. Ver ADR 0010.
+    /// </summary>
+    public async Task<(bool Exitoso, string? Error, MetodoCosteo Metodo)> FijarMetodoAsync(
+        MetodoCosteo metodo,
+        CancellationToken ct = default)
+    {
+        if (await db.Set<Movimiento>().AnyAsync(ct))
+        {
+            var actual = await MetodoAsync(ct);
+
+            return (false,
+                "Ya hay movimientos registrados: el método de costeo no se puede cambiar sin "
+                + "reescribir costos ya asentados.",
+                actual);
+        }
+
+        var configuracion = await db.Set<ConfiguracionInventario>().FirstOrDefaultAsync(ct);
+
+        if (configuracion is null)
+        {
+            configuracion = ConfiguracionInventario.PorOmision(reloj.Ahora);
+            db.Add(configuracion);
+        }
+
+        configuracion.Cambiar(metodo, reloj.Ahora);
+        await db.SaveChangesAsync(ct);
+
+        return (true, null, metodo);
+    }
+
+    /// <summary>Método vigente y si todavía se puede cambiar, para que la pantalla no mienta.</summary>
+    public async Task<(MetodoCosteo Metodo, bool SePuedeCambiar, DateTimeOffset ActualizadoEn)> LeerMetodoAsync(
+        CancellationToken ct = default)
+    {
+        var configuracion = await db.Set<ConfiguracionInventario>().FirstOrDefaultAsync(ct);
+        var hayMovimientos = await db.Set<Movimiento>().AnyAsync(ct);
+
+        return (
+            configuracion?.Metodo ?? MetodoCosteo.PromedioPonderado,
+            !hayMovimientos,
+            configuracion?.ActualizadoEn ?? default);
+    }
+
+    /// <summary>
+    /// Método de costeo de la empresa. Si no hay fila de configuración —empresas creadas antes de
+    /// H8— se asume promedio ponderado, que es el comportamiento que ya tenían.
+    /// </summary>
+    private async Task<MetodoCosteo> MetodoAsync(CancellationToken ct)
+    {
+        var configuracion = await db.Set<ConfiguracionInventario>().FirstOrDefaultAsync(ct);
+
+        return configuracion?.Metodo ?? MetodoCosteo.PromedioPonderado;
+    }
+
+    /// <summary>
+    /// Estado de costeo de **una celda**: el método de la empresa y, solo en PEPS, sus capas
+    /// vivas bloqueadas y en orden de antigüedad.
+    ///
+    /// Existe para que la bifurcación entre los dos métodos ocurra en **un solo sitio**. Todo lo
+    /// demás —bloqueo pesimista, inmutabilidad del libro, lotes, FEFO— es común, y repartir el
+    /// `if` del método por el servicio sería la forma más segura de que un camino quedara
+    /// costeando distinto que otro sin que nadie lo notara.
+    /// </summary>
+    private sealed class Costeo(MetodoCosteo metodo, List<CapaDeCosto> capas, Existencia existencia, string moneda)
+    {
+        /// <summary>Capa pendiente de persistir, que necesita el id del movimiento que la origina.</summary>
+        private (Cantidad Cantidad, Dinero Costo)? pendiente;
+
+        /// <summary>Tramos recibidos en un traslado, pendientes de persistir como capas propias.</summary>
+        private IReadOnlyList<TramoConsumido> tramosPendientes = [];
+
+        public bool EsPeps => metodo is MetodoCosteo.Peps;
+
+        private SaldoPeps SaldoPeps() =>
+            Core.SaldoPeps.De(capas.Select(c => c.ComoCapa()), existencia.Saldo().Cantidad, moneda);
+
+        /// <summary>Costo al que debe salir la mercancía, para quien solo necesita consultarlo.</summary>
+        public Dinero CostoDeSalida() =>
+            EsPeps ? SaldoPeps().CostoImplicito() : existencia.Saldo().CostoDeSalida();
+
+        public SaldoValorizado Entrada(Cantidad cantidad, Dinero costoUnitario)
+        {
+            var saldo = existencia.Saldo();
+
+            if (!EsPeps)
+            {
+                return saldo.AplicarEntrada(cantidad, costoUnitario);
+            }
+
+            // Reinicio con saldo ≤ 0: las capas anteriores se agotan en la base igual que
+            // `SaldoPeps` las descarta en memoria. Si solo se descartaran en memoria, la próxima
+            // transacción las volvería a leer y el saldo dejaría de cuadrar con sus capas.
+            if (saldo.Cantidad.Valor <= 0m)
+            {
+                foreach (var capa in capas)
+                {
+                    capa.Agotar();
+                }
+
+                capas.Clear();
+            }
+
+            pendiente = (cantidad, costoUnitario);
+
+            var despues = SaldoPeps().AplicarEntrada(cantidad, costoUnitario);
+
+            return SaldoValorizado.De(despues.Cantidad, despues.CostoImplicito());
+        }
+
+        /// <summary>
+        /// Resuelve una salida. Devuelve el saldo resultante, el costo **unitario** del asiento y
+        /// su costo **total exacto**: bajo PEPS el total es la suma de las capas consumidas y el
+        /// unitario se deriva de él, así que multiplicar el unitario no lo reproduce.
+        /// </summary>
+        public ResultadoSalida Salida(Cantidad cantidad, bool forzar)
+        {
+            var saldo = existencia.Saldo();
+
+            if (!EsPeps)
+            {
+                var promedio = forzar ? saldo.AplicarSalidaForzada(cantidad) : saldo.AplicarSalida(cantidad);
+
+                return new ResultadoSalida(promedio, saldo.CostoDeSalida(), null, []);
+            }
+
+            var antes = SaldoPeps();
+            var (restante, costoTotal) = antes.ConsumirSalida(cantidad);
+
+            // Las entidades de capa se consumen en el mismo orden que la aritmética, que es el
+            // que impone el índice: por fecha y, a igual fecha, por identificador.
+            var porConsumir = cantidad.Valor;
+            var consumido = new List<TramoConsumido>();
+
+            foreach (var capa in capas)
+            {
+                if (porConsumir <= 0m)
+                {
+                    break;
+                }
+
+                var tomar = Math.Min(porConsumir, capa.CantidadRestante);
+                consumido.Add(new TramoConsumido(
+                    new Cantidad(tomar, cantidad.Unidad),
+                    new Dinero(capa.CostoUnitario, capa.Moneda),
+                    capa.Fecha));
+
+                capa.Consumir(tomar);
+                porConsumir -= tomar;
+            }
+
+            capas.RemoveAll(c => c.CantidadRestante == 0m);
+
+            var unitario = new Dinero(costoTotal.Monto / cantidad.Valor, moneda)
+                .Redondear(SaldoValorizado.DecimalesCosto);
+
+            return new ResultadoSalida(
+                SaldoValorizado.De(restante.Cantidad, restante.CostoImplicito()),
+                unitario,
+                costoTotal,
+                consumido);
+        }
+
+        /// <summary>
+        /// Recibe en el destino los tramos que salieron del origen **conservando su costo y su
+        /// antigüedad**, para un traslado bajo PEPS.
+        ///
+        /// Fundirlos en una sola capa al costo ponderado daría el mismo valor total pero
+        /// reiniciaría la antigüedad: las unidades que queden después en el destino costarían el
+        /// promedio de lo trasladado y no lo que de verdad costó cada una. Mover mercancía de
+        /// bodega no es un hecho económico, así que no debe cambiar su costeo futuro.
+        /// </summary>
+        public SaldoValorizado RecibirTramos(IReadOnlyList<TramoConsumido> tramos, Dinero costoPonderado)
+        {
+            var total = tramos.Aggregate(
+                new Cantidad(0m, tramos[0].Cantidad.Unidad),
+                (suma, tramo) => suma + tramo.Cantidad);
+
+            if (!EsPeps)
+            {
+                return existencia.Saldo().AplicarEntrada(total, costoPonderado);
+            }
+
+            if (existencia.Saldo().Cantidad.Valor <= 0m)
+            {
+                foreach (var capa in capas)
+                {
+                    capa.Agotar();
+                }
+
+                capas.Clear();
+            }
+
+            tramosPendientes = tramos;
+
+            var saldo = SaldoPeps();
+
+            foreach (var tramo in tramos)
+            {
+                saldo = saldo.AplicarEntrada(tramo.Cantidad, tramo.CostoUnitario);
+            }
+
+            return SaldoValorizado.De(saldo.Cantidad, saldo.CostoImplicito());
+        }
+
+        /// <summary>
+        /// Crea la capa de la entrada ya con el id de su movimiento. Se llama **después** de
+        /// construir el asiento porque la capa apunta a él: es lo que permite auditar de qué
+        /// entrada salió cada peso del costo de ventas.
+        /// </summary>
+        public List<CapaDeCosto> CapasDe(Movimiento movimiento, ContextoCelda celda)
+        {
+            if (!EsPeps)
+            {
+                return [];
+            }
+
+            CapaDeCosto Crear(Cantidad cantidad, Dinero costo, DateTimeOffset fecha) =>
+                CapaDeCosto.Nueva(
+                    celda.VarianteId,
+                    celda.BodegaId,
+                    celda.UbicacionId,
+                    celda.LoteId,
+                    movimiento.Id,
+                    cantidad,
+                    costo,
+                    fecha);
+
+            if (tramosPendientes.Count > 0)
+            {
+                // Un traslado conserva la fecha original de cada tramo: es su antigüedad para
+                // PEPS, y perderla cambiaría el costo de las salidas futuras del destino.
+                var capasDeTraslado = tramosPendientes
+                    .Select(tr => Crear(tr.Cantidad, tr.CostoUnitario, tr.Fecha))
+                    .ToList();
+
+                tramosPendientes = [];
+
+                return capasDeTraslado;
+            }
+
+            if (pendiente is not { } nueva)
+            {
+                return [];
+            }
+
+            pendiente = null;
+
+            return [Crear(nueva.Cantidad, nueva.Costo, movimiento.Fecha)];
+        }
+    }
+
+    /// <summary>Un tramo de mercancía que salió de una capa concreta, con su costo y antigüedad.</summary>
+    private sealed record TramoConsumido(Cantidad Cantidad, Dinero CostoUnitario, DateTimeOffset Fecha);
+
+    /// <summary>
+    /// Resultado de resolver una salida. <c>CostoTotal</c> es nulo en promedio ponderado, donde el
+    /// total se deduce del unitario; bajo PEPS es la suma exacta de las capas consumidas y manda.
+    /// </summary>
+    private sealed record ResultadoSalida(
+        SaldoValorizado Saldo,
+        Dinero CostoUnitario,
+        Dinero? CostoTotal,
+        IReadOnlyList<TramoConsumido> Consumido);
+
+    /// <summary>
+    /// Carga el costeo de una celda. En PEPS bloquea sus capas vivas con <c>FOR UPDATE</c> y en
+    /// orden de antigüedad: sin el bloqueo, dos salidas simultáneas consumirían la misma capa.
+    /// </summary>
+    private async Task<Costeo> CargarCosteoAsync(
+        ContextoCelda celda,
+        Existencia existencia,
+        MetodoCosteo metodo,
+        CancellationToken ct)
+    {
+        if (metodo is not MetodoCosteo.Peps)
+        {
+            return new Costeo(metodo, [], existencia, MonedaBase);
+        }
+
+        var capas = await db.Set<CapaDeCosto>()
+            .FromSql($"""
+                select * from inventario.capas_costo
+                where variante_id = {celda.VarianteId}
+                  and bodega_id = {celda.BodegaId}
+                  and ubicacion_id = {celda.UbicacionId}
+                  and lote_id is not distinct from {celda.LoteId}
+                  and cantidad_restante > 0
+                order by fecha, id
+                for update
+                """)
+            .ToListAsync(ct);
+
+        return new Costeo(metodo, capas, existencia, MonedaBase);
     }
 
     /// <summary>
