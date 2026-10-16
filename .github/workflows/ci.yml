@@ -212,8 +212,19 @@ jobs:
 
           if [ "$codigo" -ne 0 ]; then
             anotar "Playwright" playwright.log
-            anotar "Registro de la Api" api.log
-            anotar "Registro de la web" web.log
+
+            # Las peticiones y su código, sin el resto del registro de EF Core: en un fallo de
+            # interfaz lo primero que hay que descartar es que el backend respondiera mal.
+            grep -oE 'Request finished HTTP/1.1 [A-Z]+ [^ ]+ - [0-9]+' api.log \
+              | sed -E 's#.*1 ([A-Z]+) http://[^/]+(\S*) - ([0-9]+)#\3 \1 \2#' > peticiones.log || true
+            anotar "Peticiones a la Api" peticiones.log
+
+            # `error-context.md` es la instantánea de accesibilidad de la página en el momento
+            # del fallo: dice qué había en pantalla de verdad, que es justo lo que no se puede
+            # deducir del «element not found».
+            for contexto in web/test-results/*/error-context.md; do
+              [ -f "$contexto" ] && anotar "Pantalla en el fallo" "$contexto"
+            done
           fi
 
           exit "$codigo"
