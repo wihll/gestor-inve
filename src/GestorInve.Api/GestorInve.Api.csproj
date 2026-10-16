@@ -11,6 +11,7 @@
     <ProjectReference Include="..\Modules\GestorInve.Ventas\GestorInve.Ventas.csproj" />
     <ProjectReference Include="..\GestorInve.Core\GestorInve.Core.csproj" />
     <ProjectReference Include="..\GestorInve.Persistencia\GestorInve.Persistencia.csproj" />
+    <ProjectReference Include="..\GestorInve.Composicion\GestorInve.Composicion.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -24,6 +25,7 @@
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>
 </Project>

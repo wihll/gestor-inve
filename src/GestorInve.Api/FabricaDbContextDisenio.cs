@@ -1,6 +1,6 @@
 using GestorInve.Core;
 using GestorInve.Persistencia;
-using GestorInve.Seguridad;
+using GestorInve.Composicion;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 
@@ -30,9 +30,3 @@ public sealed class FabricaDbContextDisenio : IDesignTimeDbContextFactory<Gestor
     }
 }
 
-/// <summary>Registro único de los módulos que aportan modelo de datos.</summary>
-public static class ModulosDePersistencia
-{
-    public static IReadOnlyList<IModuloPersistencia> Todos { get; } =
-        [new ModuloSeguridadPersistencia()];
-}

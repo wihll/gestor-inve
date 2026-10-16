@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\GestorInve.Persistencia\GestorInve.Persistencia.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Seguridad\GestorInve.Seguridad.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Catalogo\GestorInve.Catalogo.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+  </PropertyGroup>
+
+</Project>

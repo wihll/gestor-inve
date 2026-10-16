@@ -19,4 +19,6 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Tokens | Acceso ≤ 15 min sin margen de reloj; refresco hasheado, de un solo uso y con revocación de familia | `OpcionesJwtTests`, `RefrescoTests` |
 | Clave de firma | Obligatoria y ≥ 32 bytes; sin ella el arranque falla | `OpcionesJwtTests` + arranque verificado |
 | Empresa de la petición | Solo desde el token validado, nunca desde entrada del cliente | `ContextoTenantHttp` + `AutenticacionTests` |
+| Escala de cantidades | Una `Cantidad` nunca excede los decimales de su unidad | `CantidadTests` + propiedades con FsCheck |
+| Aislamiento por la API | Una petición autenticada no alcanza datos de otra empresa (404, no 403) | `CatalogoTests` |
 | Código generado | Las migraciones de EF se marcan `generated_code`; no cuenta como supresión | `.editorconfig` + ADR 0003 |

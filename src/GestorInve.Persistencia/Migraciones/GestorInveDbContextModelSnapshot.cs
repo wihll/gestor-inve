@@ -23,6 +23,334 @@ namespace GestorInve.Persistencia.Migraciones
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("GestorInve.Catalogo.Categoria", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activa");
+
+                    b.Property<DateTimeOffset?>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("actualizado_por");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nombre");
+
+                    b.Property<Guid?>("PadreId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("padre_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_categorias");
+
+                    b.HasIndex("PadreId")
+                        .HasDatabaseName("ix_categorias_padre_id");
+
+                    b.HasIndex("EmpresaId", "Nombre", "PadreId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_categorias_empresa_id_nombre_padre_id");
+
+                    b.ToTable("categorias", "catalogo");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.CodigoBarras", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("actualizado_por");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("codigo");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<Guid>("VarianteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("variante_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_codigos_barras");
+
+                    b.HasIndex("VarianteId")
+                        .HasDatabaseName("ix_codigos_barras_variante_id");
+
+                    b.HasIndex("EmpresaId", "Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_codigos_barras_empresa_id_codigo");
+
+                    b.ToTable("codigos_barras", "catalogo");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.Producto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activo");
+
+                    b.Property<DateTimeOffset?>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("actualizado_por");
+
+                    b.Property<Guid?>("CategoriaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("categoria_id");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<string>("Descripcion")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("descripcion");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<bool>("ExigeLote")
+                        .HasColumnType("boolean")
+                        .HasColumnName("exige_lote");
+
+                    b.Property<bool>("ExigeSerial")
+                        .HasColumnType("boolean")
+                        .HasColumnName("exige_serial");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("nombre");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("sku");
+
+                    b.Property<Guid>("UnidadMedidaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("unidad_medida_id");
+
+                    b.PrimitiveCollection<List<string>>("atributos")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("atributos");
+
+                    b.HasKey("Id")
+                        .HasName("pk_productos");
+
+                    b.HasIndex("CategoriaId")
+                        .HasDatabaseName("ix_productos_categoria_id");
+
+                    b.HasIndex("UnidadMedidaId")
+                        .HasDatabaseName("ix_productos_unidad_medida_id");
+
+                    b.HasIndex("EmpresaId", "Sku")
+                        .IsUnique()
+                        .HasDatabaseName("ix_productos_empresa_id_sku");
+
+                    b.ToTable("productos", "catalogo");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.UnidadMedida", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activa");
+
+                    b.Property<DateTimeOffset?>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("actualizado_por");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("codigo");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<int>("Decimales")
+                        .HasColumnType("integer")
+                        .HasColumnName("decimales");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("nombre");
+
+                    b.HasKey("Id")
+                        .HasName("pk_unidades_medida");
+
+                    b.HasIndex("EmpresaId", "Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_unidades_medida_empresa_id_codigo");
+
+                    b.ToTable("unidades_medida", "catalogo");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.Variante", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activa");
+
+                    b.Property<DateTimeOffset?>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("actualizado_por");
+
+                    b.Property<string>("AtributosJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("atributos");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<Guid>("ProductoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("producto_id");
+
+                    b.Property<string>("Sku")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("sku");
+
+                    b.Property<decimal?>("StockMaximo")
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("stock_maximo");
+
+                    b.Property<decimal?>("StockMinimo")
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("stock_minimo");
+
+                    b.HasKey("Id")
+                        .HasName("pk_variantes");
+
+                    b.HasIndex("ProductoId")
+                        .HasDatabaseName("ix_variantes_producto_id");
+
+                    b.HasIndex("EmpresaId", "Sku")
+                        .IsUnique()
+                        .HasDatabaseName("ix_variantes_empresa_id_sku");
+
+                    b.ToTable("variantes", "catalogo");
+                });
+
             modelBuilder.Entity("GestorInve.Seguridad.DirectorioEmpresa", b =>
                 {
                     b.Property<string>("Nit")
@@ -366,6 +694,51 @@ namespace GestorInve.Persistencia.Migraciones
                     b.ToTable("usuario_roles", "seguridad");
                 });
 
+            modelBuilder.Entity("GestorInve.Catalogo.Categoria", b =>
+                {
+                    b.HasOne("GestorInve.Catalogo.Categoria", null)
+                        .WithMany()
+                        .HasForeignKey("PadreId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_categorias_categorias_padre_id");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.CodigoBarras", b =>
+                {
+                    b.HasOne("GestorInve.Catalogo.Variante", null)
+                        .WithMany("Codigos")
+                        .HasForeignKey("VarianteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_codigos_barras_variantes_variante_id");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.Producto", b =>
+                {
+                    b.HasOne("GestorInve.Catalogo.Categoria", null)
+                        .WithMany()
+                        .HasForeignKey("CategoriaId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_productos_categorias_categoria_id");
+
+                    b.HasOne("GestorInve.Catalogo.UnidadMedida", null)
+                        .WithMany()
+                        .HasForeignKey("UnidadMedidaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_productos_unidades_medida_unidad_medida_id");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.Variante", b =>
+                {
+                    b.HasOne("GestorInve.Catalogo.Producto", null)
+                        .WithMany("Variantes")
+                        .HasForeignKey("ProductoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_variantes_productos_producto_id");
+                });
+
             modelBuilder.Entity("GestorInve.Seguridad.TokenRefresco", b =>
                 {
                     b.HasOne("GestorInve.Seguridad.Usuario", null)
@@ -393,6 +766,16 @@ namespace GestorInve.Persistencia.Migraciones
                         .HasConstraintName("fk_usuario_roles_usuarios_usuario_id");
 
                     b.Navigation("Rol");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.Producto", b =>
+                {
+                    b.Navigation("Variantes");
+                });
+
+            modelBuilder.Entity("GestorInve.Catalogo.Variante", b =>
+                {
+                    b.Navigation("Codigos");
                 });
 
             modelBuilder.Entity("GestorInve.Seguridad.Usuario", b =>

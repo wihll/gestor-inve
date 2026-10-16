@@ -1,5 +1,6 @@
 using GestorInve.Core;
 using GestorInve.Persistencia;
+using GestorInve.Composicion;
 using GestorInve.Seguridad;
 using Microsoft.EntityFrameworkCore;
 
@@ -37,7 +38,7 @@ public sealed class BaseDatosFixture : IAsyncLifetime
     /// pruebas lo ejercitan en vez de comprobar una configuración paralela.
     /// </summary>
     public GestorInveDbContext Crear(Guid? empresaId, IReloj? reloj = null, string usuario = "pruebas") =>
-        new FabricaContextoEmpresa(Cadena, reloj ?? new RelojSistema(), [new ModuloSeguridadPersistencia()])
+        new FabricaContextoEmpresa(Cadena, reloj ?? new RelojSistema(), ModulosDePersistencia.Todos)
             .Crear(empresaId, usuario);
 
     /// <summary>Crea una empresa y devuelve su id. El alta se hace con la sesión puesta en ella misma.</summary>

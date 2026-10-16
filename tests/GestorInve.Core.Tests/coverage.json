@@ -1,5 +1,294 @@
 {
   "GestorInve.Core.dll": {
+    "/home/user/gestor-inve/src/GestorInve.Core/Cantidad.cs": {
+      "GestorInve.Core.Unidad": {
+        "System.String GestorInve.Core.Unidad::get_Codigo()": {
+          "Lines": {
+            "33": 3054
+          },
+          "Branches": [
+            {
+              "Line": 33,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 3
+            },
+            {
+              "Line": 33,
+              "Offset": 7,
+              "EndOffset": 15,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 3051
+            }
+          ]
+        },
+        "System.Int32 GestorInve.Core.Unidad::get_Decimales()": {
+          "Lines": {
+            "35": 1832
+          },
+          "Branches": []
+        },
+        "System.String GestorInve.Core.Unidad::ToString()": {
+          "Lines": {
+            "37": 2
+          },
+          "Branches": []
+        },
+        "System.Void GestorInve.Core.Unidad::.ctor(System.String,System.Int32)": {
+          "Lines": {
+            "20": 1309,
+            "21": 1309,
+            "22": 1306,
+            "23": 1305,
+            "25": 1304,
+            "26": 1304,
+            "27": 1304
+          },
+          "Branches": []
+        }
+      },
+      "GestorInve.Core.Cantidad": {
+        "System.Decimal GestorInve.Core.Cantidad::get_Valor()": {
+          "Lines": {
+            "76": 4229
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Unidad GestorInve.Core.Cantidad::get_Unidad()": {
+          "Lines": {
+            "79": 202
+          },
+          "Branches": []
+        },
+        "System.Boolean GestorInve.Core.Cantidad::get_EsIndefinida()": {
+          "Lines": {
+            "82": 4
+          },
+          "Branches": []
+        },
+        "System.Boolean GestorInve.Core.Cantidad::get_EsNegativa()": {
+          "Lines": {
+            "84": 103
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Cantidad GestorInve.Core.Cantidad::op_Addition(GestorInve.Core.Cantidad,GestorInve.Core.Cantidad)": {
+          "Lines": {
+            "86": 907
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Cantidad GestorInve.Core.Cantidad::op_Subtraction(GestorInve.Core.Cantidad,GestorInve.Core.Cantidad)": {
+          "Lines": {
+            "88": 102
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Cantidad GestorInve.Core.Cantidad::op_Multiply(GestorInve.Core.Cantidad,System.Decimal)": {
+          "Lines": {
+            "96": 203
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Cantidad GestorInve.Core.Cantidad::Normalizar()": {
+          "Lines": {
+            "99": 200
+          },
+          "Branches": []
+        },
+        "System.String GestorInve.Core.Cantidad::ToString()": {
+          "Lines": {
+            "101": 2,
+            "102": 2,
+            "103": 2
+          },
+          "Branches": [
+            {
+              "Line": 101,
+              "Offset": 6,
+              "EndOffset": 8,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 101,
+              "Offset": 6,
+              "EndOffset": 83,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Int32 GestorInve.Core.Cantidad::EscalaSignificativa(System.Decimal)": {
+          "Lines": {
+            "110": 1327,
+            "111": 1327,
+            "113": 1327,
+            "114": 1327
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Cantidad GestorInve.Core.Cantidad::Combinar(GestorInve.Core.Cantidad,GestorInve.Core.Cantidad,System.Decimal)": {
+          "Lines": {
+            "117": 1009
+          },
+          "Branches": []
+        },
+        "System.Nullable`1<GestorInve.Core.Unidad> GestorInve.Core.Cantidad::UnidadComun(GestorInve.Core.Cantidad,GestorInve.Core.Cantidad)": {
+          "Lines": {
+            "125": 1009,
+            "126": 1009,
+            "127": 102,
+            "128": 102,
+            "131": 907,
+            "132": 200,
+            "133": 200,
+            "136": 707,
+            "137": 707,
+            "138": 707,
+            "139": 707,
+            "140": 1007
+          },
+          "Branches": [
+            {
+              "Line": 126,
+              "Offset": 20,
+              "EndOffset": 22,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 102
+            },
+            {
+              "Line": 126,
+              "Offset": 20,
+              "EndOffset": 35,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 907
+            },
+            {
+              "Line": 131,
+              "Offset": 54,
+              "EndOffset": 56,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 200
+            },
+            {
+              "Line": 131,
+              "Offset": 54,
+              "EndOffset": 69,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 707
+            },
+            {
+              "Line": 136,
+              "Offset": 116,
+              "EndOffset": 118,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 2
+            },
+            {
+              "Line": 136,
+              "Offset": 116,
+              "EndOffset": 238,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 705
+            }
+          ]
+        },
+        "System.Decimal GestorInve.Core.Cantidad::Redondear(System.Decimal)": {
+          "Lines": {
+            "143": 403
+          },
+          "Branches": [
+            {
+              "Line": 143,
+              "Offset": 14,
+              "EndOffset": 16,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 402
+            },
+            {
+              "Line": 143,
+              "Offset": 14,
+              "EndOffset": 44,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Void GestorInve.Core.Cantidad::.ctor(System.Decimal,GestorInve.Core.Unidad)": {
+          "Lines": {
+            "53": 1328,
+            "54": 1328,
+            "55": 1,
+            "56": 1,
+            "59": 1327,
+            "60": 103,
+            "61": 103,
+            "62": 103,
+            "63": 103,
+            "66": 1224,
+            "67": 1224,
+            "68": 1224
+          },
+          "Branches": [
+            {
+              "Line": 54,
+              "Offset": 15,
+              "EndOffset": 17,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 54,
+              "Offset": 15,
+              "EndOffset": 34,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1327
+            },
+            {
+              "Line": 59,
+              "Offset": 51,
+              "EndOffset": 53,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 103
+            },
+            {
+              "Line": 59,
+              "Offset": 51,
+              "EndOffset": 173,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 1224
+            }
+          ]
+        },
+        "System.Void GestorInve.Core.Cantidad::.ctor(System.Decimal,System.Nullable`1<GestorInve.Core.Unidad>,System.Boolean)": {
+          "Lines": {
+            "71": 1410,
+            "72": 1410,
+            "73": 1410,
+            "74": 1410
+          },
+          "Branches": []
+        }
+      }
+    },
     "/home/user/gestor-inve/src/GestorInve.Core/Dinero.cs": {
       "GestorInve.Core.Dinero": {
         "System.Decimal GestorInve.Core.Dinero::get_Monto()": {

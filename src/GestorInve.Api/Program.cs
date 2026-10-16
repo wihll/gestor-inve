@@ -1,7 +1,9 @@
 using System.Text;
 using GestorInve.Api;
 using GestorInve.Api.Autenticacion;
+using GestorInve.Api.Catalogo;
 using GestorInve.Core;
+using GestorInve.Composicion;
 using GestorInve.Core.Seguridad;
 using GestorInve.Persistencia;
 using GestorInve.Seguridad;
@@ -95,6 +97,7 @@ if (conPersistencia)
     app.UseAuthorization();
     app.MapEndpointsAutenticacion();
     app.MapEndpointsEmpresa();
+    app.MapEndpointsCatalogo();
 }
 
 await app.RunAsync();
