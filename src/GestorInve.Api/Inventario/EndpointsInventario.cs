@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using GestorInve.Api.Autenticacion;
+using GestorInve.Core;
 using GestorInve.Inventario;
 using GestorInve.Persistencia;
 using GestorInve.Seguridad;
@@ -16,6 +17,11 @@ public sealed record RespuestaBodega(Guid Id, string Codigo, string Nombre, bool
 
 public sealed record PeticionUbicacion(string Codigo, string Nombre);
 
+/// <summary>
+/// <see cref="LoteId"/> es obligatorio si el producto exige lote o serial, y debe ser nulo si no
+/// lo exige. Una **salida sin lote** de un producto con lotes se interpreta como «elige tú»: el
+/// servidor aplica FEFO y puede devolver **varios** asientos (ADR 0009).
+/// </summary>
 public sealed record PeticionMovimiento(
     TipoMovimiento Tipo,
     Guid VarianteId,
@@ -25,7 +31,8 @@ public sealed record PeticionMovimiento(
     decimal? CostoUnitario,
     DateTimeOffset? Fecha,
     string? Referencia,
-    string? Observacion);
+    string? Observacion,
+    Guid? LoteId = null);
 
 public sealed record PeticionTraslado(
     Guid VarianteId,
@@ -36,7 +43,18 @@ public sealed record PeticionTraslado(
     decimal Cantidad,
     DateTimeOffset? Fecha,
     string? Referencia,
-    string? Observacion);
+    string? Observacion,
+    Guid? LoteId = null);
+
+public sealed record PeticionLote(string Codigo, DateOnly? Vencimiento, bool EsSerial);
+
+public sealed record RespuestaLote(
+    Guid Id,
+    Guid VarianteId,
+    string Codigo,
+    DateOnly? Vencimiento,
+    bool EsSerial,
+    bool Vencido);
 
 public sealed record PeticionReversa(string? Observacion);
 
@@ -59,7 +77,9 @@ public sealed record RespuestaMovimiento(
     string? Observacion,
     Guid? TrasladoId,
     Guid? MovimientoReversadoId,
-    bool ForzadoNegativo);
+    bool ForzadoNegativo,
+    Guid? LoteId,
+    Guid? OperacionId);
 
 public sealed record RespuestaExistencia(
     Guid VarianteId,
@@ -69,7 +89,8 @@ public sealed record RespuestaExistencia(
     string Unidad,
     decimal CostoPromedio,
     decimal Valorizado,
-    string Moneda);
+    string Moneda,
+    Guid? LoteId);
 
 /// <summary>
 /// Endpoints del inventario.
@@ -88,6 +109,7 @@ public static class EndpointsInventario
         var grupo = rutas.MapGroup("/inventario").WithTags("Inventario");
 
         MapBodegas(grupo);
+        MapLotes(grupo);
         MapMovimientos(grupo);
         MapConsultas(grupo);
 
@@ -164,6 +186,77 @@ public static class EndpointsInventario
             .WithSummary("Añade una ubicación a una bodega.");
     }
 
+    private static void MapLotes(RouteGroupBuilder grupo)
+    {
+        grupo.MapGet("/lotes", async (
+            GestorInveDbContext db,
+            IReloj reloj,
+            Guid? varianteId,
+            CancellationToken ct) =>
+        {
+            var consulta = db.Set<Lote>().AsQueryable();
+
+            if (varianteId is { } variante)
+            {
+                consulta = consulta.Where(l => l.VarianteId == variante);
+            }
+
+            // Orden FEFO también en la consulta: es el orden en el que se van a consumir, así que
+            // es el que tiene sentido ver. Los sin vencimiento al final.
+            var lotes = await consulta
+                .OrderBy(l => l.Vencimiento ?? DateOnly.MaxValue)
+                .ThenBy(l => l.Codigo)
+                .ToListAsync(ct);
+
+            var hoy = DateOnly.FromDateTime(reloj.Ahora.UtcDateTime);
+
+            return Results.Ok(lotes.Select(l => Proyectar(l, hoy)).ToList());
+        })
+            .RequireAuthorization(Permiso.InventarioLeer)
+            .Produces<List<RespuestaLote>>(StatusCodes.Status200OK)
+            .WithSummary("Lotes y seriales, en orden de vencimiento más próximo primero.");
+
+        grupo.MapPost("/variantes/{varianteId:guid}/lotes", async (
+            Guid varianteId,
+            PeticionLote peticion,
+            GestorInveDbContext db,
+            IReloj reloj,
+            CancellationToken ct) =>
+        {
+            // La variante se comprueba contra la empresa de la sesión (filtro global + RLS): un
+            // identificador de otra empresa responde 404, no 403.
+            if (!await db.Set<GestorInve.Catalogo.Variante>().AnyAsync(v => v.Id == varianteId, ct))
+            {
+                return Results.Problem(
+                    detail: "La variante no existe.",
+                    statusCode: StatusCodes.Status404NotFound);
+            }
+
+            if (string.IsNullOrWhiteSpace(peticion.Codigo))
+            {
+                return Results.Problem(
+                    detail: "El lote necesita código.",
+                    statusCode: StatusCodes.Status400BadRequest);
+            }
+
+            var lote = Lote.Nuevo(varianteId, peticion.Codigo, peticion.Vencimiento, peticion.EsSerial);
+            db.Add(lote);
+
+            var hoy = DateOnly.FromDateTime(reloj.Ahora.UtcDateTime);
+
+            return await GuardarAsync(
+                db,
+                () => Results.Created($"/api/inventario/lotes/{lote.Id}", Proyectar(lote, hoy)),
+                ct);
+        })
+            .RequireAuthorization(Permiso.InventarioAjustar)
+            .Produces<RespuestaLote>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .WithSummary("Crea un lote o un serial para una variante.");
+    }
+
     private static void MapMovimientos(RouteGroupBuilder grupo)
     {
         grupo.MapPost("/movimientos", async (
@@ -197,20 +290,24 @@ public static class EndpointsInventario
                     peticion.CostoUnitario,
                     peticion.Fecha,
                     peticion.Referencia,
-                    peticion.Observacion),
+                    peticion.Observacion,
+                    peticion.LoteId),
                 permitirNegativo: PuedeAjustar(principal),
                 ct);
 
-            return Respuesta(resultado, m => Results.Created($"/api/inventario/movimientos/{m[0].Id}", Proyectar(m[0])));
+            // Una salida FEFO puede generar varios asientos, así que la respuesta es siempre una
+            // **lista**: devolver el primero escondería que el saldo se tomó de tres lotes.
+            return Respuesta(resultado, m => Results.Created(
+                $"/api/inventario/movimientos/{m[0].Id}",
+                m.Select(Proyectar).ToList()));
         })
             .RequireAuthorization(Permiso.InventarioMover)
-            .Produces<RespuestaMovimiento>(StatusCodes.Status201Created)
+            .Produces<List<RespuestaMovimiento>>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status501NotImplemented)
-            .WithSummary("Registra una entrada, una salida o un ajuste.");
+            .WithSummary("Registra una entrada, una salida o un ajuste. Una salida sin lote aplica FEFO.");
 
         grupo.MapPost("/traslados", async (
             PeticionTraslado peticion,
@@ -227,7 +324,8 @@ public static class EndpointsInventario
                     peticion.Cantidad,
                     peticion.Fecha,
                     peticion.Referencia,
-                    peticion.Observacion),
+                    peticion.Observacion,
+                    peticion.LoteId),
                 ct);
 
             return Respuesta(resultado, m => Results.Created(
@@ -332,9 +430,17 @@ public static class EndpointsInventario
                 or FalloMovimiento.MovimientoInexistente =>
                 Results.Problem(detail: resultado.Mensaje, statusCode: StatusCodes.Status404NotFound),
 
+            FalloMovimiento.LoteInexistente =>
+                Results.Problem(detail: resultado.Mensaje, statusCode: StatusCodes.Status404NotFound),
+
             FalloMovimiento.SinExistencias
                 or FalloMovimiento.YaReversado
-                or FalloMovimiento.MismaUbicacion =>
+                or FalloMovimiento.MismaUbicacion
+                // 409 y no 400: el lote vencido y el serial duplicado no son datos mal formados,
+                // son un conflicto con el estado del inventario. Quien integra necesita poder
+                // distinguir «corrige la petición» de «la mercancía no está como creías».
+                or FalloMovimiento.LoteVencido
+                or FalloMovimiento.SerialInvalido =>
                 Results.Problem(detail: resultado.Mensaje, statusCode: StatusCodes.Status409Conflict),
 
             FalloMovimiento.TrazabilidadNoSoportada =>
@@ -372,6 +478,19 @@ public static class EndpointsInventario
 
     private static RespuestaUbicacion Proyectar(Ubicacion u) => new(u.Id, u.Codigo, u.Nombre, u.Activa);
 
+    /// <summary>
+    /// `Vencido` se calcula aquí y no en el cliente: si cada pantalla comparara la fecha por su
+    /// cuenta, el navegador usaría su zona horaria y el mismo lote estaría vencido o no según el
+    /// equipo desde el que se consulte.
+    /// </summary>
+    private static RespuestaLote Proyectar(Lote l, DateOnly hoy) => new(
+        l.Id,
+        l.VarianteId,
+        l.Codigo,
+        l.Vencimiento,
+        l.EsSerial,
+        l.EstaVencido(hoy));
+
     private static RespuestaMovimiento Proyectar(Movimiento m) => new(
         m.Id,
         m.Tipo,
@@ -391,7 +510,9 @@ public static class EndpointsInventario
         m.Observacion,
         m.TrasladoId,
         m.MovimientoReversadoId,
-        m.ForzadoNegativo);
+        m.ForzadoNegativo,
+        m.LoteId,
+        m.OperacionId);
 
     private static RespuestaExistencia Proyectar(Existencia e) => new(
         e.VarianteId,
@@ -401,5 +522,6 @@ public static class EndpointsInventario
         e.UnidadCodigo,
         e.CostoPromedio,
         e.Saldo().Valorizado().Monto,
-        e.Moneda);
+        e.Moneda,
+        e.LoteId);
 }

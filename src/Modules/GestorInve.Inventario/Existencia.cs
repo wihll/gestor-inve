@@ -3,7 +3,7 @@ using GestorInve.Core;
 namespace GestorInve.Inventario;
 
 /// <summary>
-/// Saldo de una celda del inventario: (variante, bodega, ubicación). Es una **proyección** del
+/// Saldo de una celda del inventario: (variante, bodega, ubicación, lote). Es una **proyección** del
 /// kardex, no la verdad: la verdad es el libro de movimientos, y esta fila existe para poder
 /// consultar y bloquear el saldo sin recorrer el histórico.
 ///
@@ -19,12 +19,13 @@ public class Existencia : IEntidadDeEmpresa
         Moneda = string.Empty;
     }
 
-    private Existencia(Guid varianteId, Guid bodegaId, Guid ubicacionId, Unidad unidad, string moneda)
+    private Existencia(Guid varianteId, Guid bodegaId, Guid ubicacionId, Guid? loteId, Unidad unidad, string moneda)
     {
         Id = Guid.CreateVersion7();
         VarianteId = varianteId;
         BodegaId = bodegaId;
         UbicacionId = ubicacionId;
+        LoteId = loteId;
         UnidadCodigo = unidad.Codigo;
         UnidadDecimales = unidad.Decimales;
         Moneda = moneda;
@@ -43,6 +44,13 @@ public class Existencia : IEntidadDeEmpresa
 
     public Guid UbicacionId { get; private set; }
 
+    /// <summary>
+    /// Lote de esta celda, o nulo en un producto sin trazabilidad —que es la mayoría—. No se usa
+    /// un lote sintético «sin lote» porque obligaría a crear una fila de catálogo por cada
+    /// variante para no decir nada. Ver ADR 0009.
+    /// </summary>
+    public Guid? LoteId { get; private set; }
+
     public decimal Cantidad { get; private set; }
 
     public decimal CostoPromedio { get; private set; }
@@ -55,8 +63,14 @@ public class Existencia : IEntidadDeEmpresa
 
     public DateTimeOffset ActualizadoEn { get; private set; }
 
-    internal static Existencia Nueva(Guid varianteId, Guid bodegaId, Guid ubicacionId, Unidad unidad, string moneda) =>
-        new(varianteId, bodegaId, ubicacionId, unidad, moneda);
+    internal static Existencia Nueva(
+        Guid varianteId,
+        Guid bodegaId,
+        Guid ubicacionId,
+        Guid? loteId,
+        Unidad unidad,
+        string moneda) =>
+        new(varianteId, bodegaId, ubicacionId, loteId, unidad, moneda);
 
     /// <summary>Saldo valorizado actual, para pasárselo a la aritmética del costeo.</summary>
     public SaldoValorizado Saldo() => SaldoValorizado.De(

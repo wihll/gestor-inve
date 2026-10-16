@@ -76,6 +76,7 @@ public class Movimiento : IEntidadDeEmpresa
         Guid varianteId,
         Guid bodegaId,
         Guid ubicacionId,
+        Guid? loteId,
         Cantidad cantidad,
         Dinero costoUnitario,
         SaldoValorizado saldoDespues,
@@ -89,6 +90,7 @@ public class Movimiento : IEntidadDeEmpresa
         VarianteId = varianteId;
         BodegaId = bodegaId;
         UbicacionId = ubicacionId;
+        LoteId = loteId;
 
         Cantidad = cantidad.Valor;
         UnidadCodigo = cantidad.Unidad.Codigo;
@@ -121,6 +123,9 @@ public class Movimiento : IEntidadDeEmpresa
 
     public Guid UbicacionId { get; private set; }
 
+    /// <summary>Lote del asiento, o nulo si el producto no exige trazabilidad (ADR 0009).</summary>
+    public Guid? LoteId { get; private set; }
+
     /// <summary>Cantidad **siempre positiva**; el sentido lo da <see cref="Tipo"/>.</summary>
     public decimal Cantidad { get; private set; }
 
@@ -151,6 +156,14 @@ public class Movimiento : IEntidadDeEmpresa
     /// <summary>Agrupa los dos movimientos de un traslado como una sola operación.</summary>
     public Guid? TrasladoId { get; private set; }
 
+    /// <summary>
+    /// Agrupa los asientos que una **sola petición** generó. Aparece cuando una salida FEFO
+    /// consume varios lotes: el libro necesita un asiento por lote para poder reconstruir el
+    /// saldo de cada uno, y este identificador deja que la pantalla y los reportes lo presenten
+    /// como la operación única que fue. Ver ADR 0009.
+    /// </summary>
+    public Guid? OperacionId { get; private set; }
+
     /// <summary>Movimiento que este reversa. Índice único: cada asiento se reversa una sola vez.</summary>
     public Guid? MovimientoReversadoId { get; private set; }
 
@@ -172,6 +185,7 @@ public class Movimiento : IEntidadDeEmpresa
         Guid varianteId,
         Guid bodegaId,
         Guid ubicacionId,
+        Guid? loteId,
         Cantidad cantidad,
         Dinero costoUnitario,
         SaldoValorizado saldoDespues,
@@ -181,11 +195,13 @@ public class Movimiento : IEntidadDeEmpresa
         string? observacion = null,
         Guid? trasladoId = null,
         Guid? movimientoReversadoId = null,
-        bool forzadoNegativo = false) =>
-        new(tipo, varianteId, bodegaId, ubicacionId, cantidad, costoUnitario, saldoDespues, fecha, usuario, referencia, observacion)
+        bool forzadoNegativo = false,
+        Guid? operacionId = null) =>
+        new(tipo, varianteId, bodegaId, ubicacionId, loteId, cantidad, costoUnitario, saldoDespues, fecha, usuario, referencia, observacion)
         {
             TrasladoId = trasladoId,
             MovimientoReversadoId = movimientoReversadoId,
             ForzadoNegativo = forzadoNegativo,
+            OperacionId = operacionId,
         };
 }

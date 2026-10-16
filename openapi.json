@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:5091/"
+      "url": "http://127.0.0.1:5094/"
     }
   ],
   "paths": {
@@ -799,12 +799,116 @@
         }
       }
     },
+    "/api/inventario/lotes": {
+      "get": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Lotes y seriales, en orden de vencimiento más próximo primero.",
+        "parameters": [
+          {
+            "name": "varianteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaLote"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/inventario/variantes/{varianteId}/lotes": {
+      "post": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Crea un lote o un serial para una variante.",
+        "parameters": [
+          {
+            "name": "varianteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionLote"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaLote"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/inventario/movimientos": {
       "post": {
         "tags": [
           "Inventario"
         ],
-        "summary": "Registra una entrada, una salida o un ajuste.",
+        "summary": "Registra una entrada, una salida o un ajuste. Una salida sin lote aplica FEFO.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -821,7 +925,10 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RespuestaMovimiento"
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaMovimiento"
+                  }
                 }
               }
             }
@@ -858,16 +965,6 @@
           },
           "409": {
             "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "501": {
-            "description": "Not Implemented",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -1197,6 +1294,29 @@
           }
         }
       },
+      "PeticionLote": {
+        "required": [
+          "codigo",
+          "vencimiento",
+          "esSerial"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "vencimiento": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "esSerial": {
+            "type": "boolean"
+          }
+        }
+      },
       "PeticionMovimiento": {
         "required": [
           "tipo",
@@ -1264,6 +1384,13 @@
               "null",
               "string"
             ]
+          },
+          "loteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -1411,6 +1538,13 @@
               "null",
               "string"
             ]
+          },
+          "loteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -1600,7 +1734,8 @@
           "unidad",
           "costoPromedio",
           "valorizado",
-          "moneda"
+          "moneda",
+          "loteId"
         ],
         "type": "object",
         "properties": {
@@ -1645,6 +1780,50 @@
           },
           "moneda": {
             "type": "string"
+          },
+          "loteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "RespuestaLote": {
+        "required": [
+          "id",
+          "varianteId",
+          "codigo",
+          "vencimiento",
+          "esSerial",
+          "vencido"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "varianteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "vencimiento": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "esSerial": {
+            "type": "boolean"
+          },
+          "vencido": {
+            "type": "boolean"
           }
         }
       },
@@ -1668,7 +1847,9 @@
           "observacion",
           "trasladoId",
           "movimientoReversadoId",
-          "forzadoNegativo"
+          "forzadoNegativo",
+          "loteId",
+          "operacionId"
         ],
         "type": "object",
         "properties": {
@@ -1772,6 +1953,20 @@
           },
           "forzadoNegativo": {
             "type": "boolean"
+          },
+          "loteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "operacionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },

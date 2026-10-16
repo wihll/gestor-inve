@@ -128,6 +128,24 @@ main {
   color: var(--texto-suave);
 }
 
+/* La casilla no lleva `.campo`: su etiqueta va al lado y no encima, y no debe estirarse al
+   100 % como los demás campos. El área táctil se mantiene en 44 px como el resto. */
+.campo-casilla {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  margin-bottom: 12px;
+  font-size: 0.9375rem;
+}
+
+.campo-casilla input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
 input,
 select,
 textarea {
