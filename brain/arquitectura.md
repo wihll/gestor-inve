@@ -29,3 +29,10 @@ Pendiente de ratificar en [[decisiones/0001-stack]].
 - `Core` añade los contratos puros `IReloj`, `IContextoTenant`, `IEntidadDeEmpresa`, `IRaizDeEmpresa`, `IAuditable`.
 - `PoliticasRlsTests` deriva del modelo de EF qué tablas deben estar protegidas, así que una tabla nueva sin política RLS rompe el CI en vez de dejar de aislar en silencio.
 - Api: `/health` es liveness y no toca la base de datos; `/ready` sí la comprueba (verificado: con la base caída, `/health` 200 y `/ready` 503).
+
+## Seguridad (H5)
+- `Core/Seguridad`: `HasheadorContrasena` (PBKDF2-SHA512, 210k iteraciones, formato versionado) y la política de contraseñas. Sin dependencias.
+- `Modules/GestorInve.Seguridad`: `Usuario` (con bloqueo por intentos), `Rol` y `Permiso` (RBAC `recurso:accion`), `UsuarioRol` **explícito** para que quede sujeto al RLS, `TokenRefresco` (hash, un solo uso, familias), `DirectorioEmpresa` (NIT → empresa, la única tabla sin RLS a propósito) y `ServicioAltaEmpresa`.
+- `Api/Autenticacion`: JWT HS256 de 15 min sin margen de reloj, `/auth/login`, `/auth/refresh` (rotación y revocación de familia al detectar reutilización), `/auth/logout`, `/auth/yo`, `/empresas`. `ContextoTenantHttp` deduce la empresa **solo del token validado**.
+- El arranque falla si falta la clave de firma o mide menos de 32 bytes.
+- Detalle y motivos en [[decisiones/0004-autenticacion-y-autorizacion]].

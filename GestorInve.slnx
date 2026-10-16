@@ -20,5 +20,6 @@
     <Project Path="tests/GestorInve.Architecture.Tests/GestorInve.Architecture.Tests.csproj" />
     <Project Path="tests/GestorInve.Core.Tests/GestorInve.Core.Tests.csproj" />
     <Project Path="tests/GestorInve.Persistencia.Tests/GestorInve.Persistencia.Tests.csproj" />
+    <Project Path="tests/GestorInve.Seguridad.Tests/GestorInve.Seguridad.Tests.csproj" />
   </Folder>
 </Solution>

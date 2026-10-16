@@ -22,7 +22,8 @@ RLS y `jsonb` no existen en un proveedor en memoria, así que probarlos ahí dar
 Las pruebas de integración se marcan `Categoria=Integracion`: el job de Windows no las corre, porque los contenedores de servicio de Actions solo existen en Linux. Un guardia en el CI falla si el filtro no ejecuta ninguna, para que renombrar la etiqueta no deje el aislamiento sin probar.
 
 ## Consecuencias
-- El alta de empresas (onboarding) necesita un rol con `bypassrls`, porque la política de `empresas` exige que la sesión ya apunte a la empresa que se crea. **Pendiente de definir en H5.**
-- `IContextoTenant` hoy se registra fijo y vacío; en H5 pasa a deducirse del usuario autenticado.
+- ~~El alta de empresas necesita un rol con `bypassrls`.~~ **Corregido en H5**: no lo necesita. El identificador de la empresa se genera en la aplicación, así que se pone esa empresa en la sesión antes de insertar y la política (`id = empresa de la sesión`) se cumple con el rol normal. El sistema **no tiene ningún rol con `bypassrls`**, lo que es una ganancia de seguridad sobre lo que este ADR suponía.
+- H5 añadió `seguridad.directorio_empresas`, la **única tabla deliberadamente sin RLS**: traduce NIT → empresa para poder iniciar sesión (encontrar al usuario exige saber ya su empresa). Ver ADR 0004 y los comentarios de `DirectorioEmpresa`.
+- ~~`IContextoTenant` se registra fijo y vacío.~~ Desde H5 lo resuelve `ContextoTenantHttp` a partir del token validado.
 - Toda tabla nueva con `empresa_id` debe añadir su política RLS en la migración. Lo vigila `PoliticasRlsTests`, que **deriva la expectativa del modelo de EF**: cada entidad que implemente `IEntidadDeEmpresa` o `IRaizDeEmpresa` queda cubierta sin tocar la prueba, y falla si falta `enable`, falta `force`, no hay política o la política no consulta `gestorinve.empresa_id` (verificado saboteando una base de prueba).
 - `IRaizDeEmpresa` marca la entidad que *es* una empresa (`Empresa`): su política filtra por su propia clave, no por `empresa_id`, pero necesita la misma protección.
