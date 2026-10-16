@@ -351,6 +351,311 @@ namespace GestorInve.Persistencia.Migraciones
                     b.ToTable("variantes", "catalogo");
                 });
 
+            modelBuilder.Entity("GestorInve.Inventario.Bodega", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activa");
+
+                    b.Property<DateTimeOffset?>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("actualizado_por");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("codigo");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nombre");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bodegas");
+
+                    b.HasIndex("EmpresaId", "Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bodegas_empresa_id_codigo");
+
+                    b.ToTable("bodegas", "inventario");
+                });
+
+            modelBuilder.Entity("GestorInve.Inventario.Existencia", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<Guid>("BodegaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bodega_id");
+
+                    b.Property<decimal>("Cantidad")
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("cantidad");
+
+                    b.Property<decimal>("CostoPromedio")
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("costo_promedio");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("moneda");
+
+                    b.Property<Guid>("UbicacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ubicacion_id");
+
+                    b.Property<string>("UnidadCodigo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("unidad_codigo");
+
+                    b.Property<int>("UnidadDecimales")
+                        .HasColumnType("integer")
+                        .HasColumnName("unidad_decimales");
+
+                    b.Property<Guid>("VarianteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("variante_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_existencias");
+
+                    b.HasIndex("BodegaId")
+                        .HasDatabaseName("ix_existencias_bodega_id");
+
+                    b.HasIndex("UbicacionId")
+                        .HasDatabaseName("ix_existencias_ubicacion_id");
+
+                    b.HasIndex("VarianteId", "BodegaId", "UbicacionId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_existencias_variante_id_bodega_id_ubicacion_id");
+
+                    b.ToTable("existencias", "inventario");
+                });
+
+            modelBuilder.Entity("GestorInve.Inventario.Movimiento", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BodegaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bodega_id");
+
+                    b.Property<decimal>("Cantidad")
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("cantidad");
+
+                    b.Property<decimal>("CostoTotal")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("costo_total");
+
+                    b.Property<decimal>("CostoUnitario")
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("costo_unitario");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<DateTimeOffset>("Fecha")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("fecha");
+
+                    b.Property<bool>("ForzadoNegativo")
+                        .HasColumnType("boolean")
+                        .HasColumnName("forzado_negativo");
+
+                    b.Property<string>("Moneda")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("moneda");
+
+                    b.Property<Guid?>("MovimientoReversadoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("movimiento_reversado_id");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("observacion");
+
+                    b.Property<string>("Referencia")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("referencia");
+
+                    b.Property<decimal>("SaldoCantidadDespues")
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("saldo_cantidad_despues");
+
+                    b.Property<decimal>("SaldoCostoPromedioDespues")
+                        .HasColumnType("numeric(18,6)")
+                        .HasColumnName("saldo_costo_promedio_despues");
+
+                    b.Property<string>("Tipo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tipo");
+
+                    b.Property<Guid?>("TrasladoId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("traslado_id");
+
+                    b.Property<Guid>("UbicacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ubicacion_id");
+
+                    b.Property<string>("UnidadCodigo")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("unidad_codigo");
+
+                    b.Property<int>("UnidadDecimales")
+                        .HasColumnType("integer")
+                        .HasColumnName("unidad_decimales");
+
+                    b.Property<string>("Usuario")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("usuario");
+
+                    b.Property<Guid>("VarianteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("variante_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_movimientos");
+
+                    b.HasIndex("BodegaId")
+                        .HasDatabaseName("ix_movimientos_bodega_id");
+
+                    b.HasIndex("MovimientoReversadoId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_movimientos_movimiento_reversado_id");
+
+                    b.HasIndex("TrasladoId")
+                        .HasDatabaseName("ix_movimientos_traslado_id");
+
+                    b.HasIndex("UbicacionId")
+                        .HasDatabaseName("ix_movimientos_ubicacion_id");
+
+                    b.HasIndex("VarianteId")
+                        .HasDatabaseName("ix_movimientos_variante_id");
+
+                    b.HasIndex("EmpresaId", "VarianteId", "BodegaId", "UbicacionId", "Fecha")
+                        .HasDatabaseName("ix_movimientos_empresa_id_variante_id_bodega_id_ubicacion_id_f");
+
+                    b.ToTable("movimientos", "inventario");
+                });
+
+            modelBuilder.Entity("GestorInve.Inventario.Ubicacion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Activa")
+                        .HasColumnType("boolean")
+                        .HasColumnName("activa");
+
+                    b.Property<DateTimeOffset?>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("actualizado_por");
+
+                    b.Property<Guid>("BodegaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bodega_id");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("codigo");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("nombre");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ubicaciones");
+
+                    b.HasIndex("BodegaId", "Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ubicaciones_bodega_id_codigo");
+
+                    b.ToTable("ubicaciones", "inventario");
+                });
+
             modelBuilder.Entity("GestorInve.Seguridad.DirectorioEmpresa", b =>
                 {
                     b.Property<string>("Nit")
@@ -739,6 +1044,70 @@ namespace GestorInve.Persistencia.Migraciones
                         .HasConstraintName("fk_variantes_productos_producto_id");
                 });
 
+            modelBuilder.Entity("GestorInve.Inventario.Existencia", b =>
+                {
+                    b.HasOne("GestorInve.Inventario.Bodega", null)
+                        .WithMany()
+                        .HasForeignKey("BodegaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_existencias_bodegas_bodega_id");
+
+                    b.HasOne("GestorInve.Inventario.Ubicacion", null)
+                        .WithMany()
+                        .HasForeignKey("UbicacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_existencias_ubicaciones_ubicacion_id");
+
+                    b.HasOne("GestorInve.Catalogo.Variante", null)
+                        .WithMany()
+                        .HasForeignKey("VarianteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_existencias_variantes_variante_id");
+                });
+
+            modelBuilder.Entity("GestorInve.Inventario.Movimiento", b =>
+                {
+                    b.HasOne("GestorInve.Inventario.Bodega", null)
+                        .WithMany()
+                        .HasForeignKey("BodegaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_movimientos_bodegas_bodega_id");
+
+                    b.HasOne("GestorInve.Inventario.Movimiento", null)
+                        .WithMany()
+                        .HasForeignKey("MovimientoReversadoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_movimientos_movimientos_movimiento_reversado_id");
+
+                    b.HasOne("GestorInve.Inventario.Ubicacion", null)
+                        .WithMany()
+                        .HasForeignKey("UbicacionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_movimientos_ubicaciones_ubicacion_id");
+
+                    b.HasOne("GestorInve.Catalogo.Variante", null)
+                        .WithMany()
+                        .HasForeignKey("VarianteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_movimientos_variantes_variante_id");
+                });
+
+            modelBuilder.Entity("GestorInve.Inventario.Ubicacion", b =>
+                {
+                    b.HasOne("GestorInve.Inventario.Bodega", null)
+                        .WithMany("Ubicaciones")
+                        .HasForeignKey("BodegaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ubicaciones_bodegas_bodega_id");
+                });
+
             modelBuilder.Entity("GestorInve.Seguridad.TokenRefresco", b =>
                 {
                     b.HasOne("GestorInve.Seguridad.Usuario", null)
@@ -776,6 +1145,11 @@ namespace GestorInve.Persistencia.Migraciones
             modelBuilder.Entity("GestorInve.Catalogo.Variante", b =>
                 {
                     b.Navigation("Codigos");
+                });
+
+            modelBuilder.Entity("GestorInve.Inventario.Bodega", b =>
+                {
+                    b.Navigation("Ubicaciones");
                 });
 
             modelBuilder.Entity("GestorInve.Seguridad.Usuario", b =>

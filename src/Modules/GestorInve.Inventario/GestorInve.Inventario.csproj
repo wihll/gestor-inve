@@ -2,6 +2,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\GestorInve.Core\GestorInve.Core.csproj" />
+    <ProjectReference Include="..\..\GestorInve.Persistencia\GestorInve.Persistencia.csproj" />
+    <ProjectReference Include="..\GestorInve.Catalogo\GestorInve.Catalogo.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
 
   <PropertyGroup>

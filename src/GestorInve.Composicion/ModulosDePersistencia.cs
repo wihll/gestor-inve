@@ -1,4 +1,5 @@
 using GestorInve.Catalogo;
+using GestorInve.Inventario;
 using GestorInve.Persistencia;
 using GestorInve.Seguridad;
 
@@ -18,5 +19,9 @@ namespace GestorInve.Composicion;
 public static class ModulosDePersistencia
 {
     public static IReadOnlyList<IModuloPersistencia> Todos { get; } =
-        [new ModuloSeguridadPersistencia(), new ModuloCatalogoPersistencia()];
+        [
+            new ModuloSeguridadPersistencia(),
+            new ModuloCatalogoPersistencia(),
+            new ModuloInventarioPersistencia(),
+        ];
 }

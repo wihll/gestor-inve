@@ -43,3 +43,10 @@ Pendiente de ratificar en [[decisiones/0001-stack]].
 - `Core` añade `Unidad` y `Cantidad`: decimal con unidad, que rechaza más decimales de los que la unidad admite y redondea alejándose de cero al escalar.
 - **La variante lleva el stock, nunca el producto**: el kardex de H7 apuntará a variantes. Motivos y ruta hacia las conversiones de unidad en [[decisiones/0005-catalogo-variantes-y-unidades]].
 - `src/GestorInve.Api/Catalogo` — CRUD con permisos `catalogo:*`. Primer uso real de `ContextoTenantHttp` con datos de negocio; hay pruebas de que una empresa no alcanza los datos de otra **a través de la API**.
+
+## Inventario (H7)
+- `src/Modules/GestorInve.Inventario` — `Bodega`, `Ubicacion`, `Movimiento` (el kardex) y `Existencia`. Esquema `inventario`, con RLS y un **disparador que impide modificar o borrar un movimiento**.
+- `Core` añade `SaldoValorizado`: toda la aritmética del costeo promedio, pura y probada con propiedades.
+- Las existencias se cuentan por (variante, bodega, **ubicación**); toda bodega nace con su ubicación `GENERAL`.
+- Concurrencia con bloqueo pesimista (`SELECT … FOR UPDATE`) sobre la celda; medido: sin él, 10 salidas simultáneas dejan 90 en vez de 50.
+- **Las dependencias entre módulos ahora se declaran** en `ArquitecturaTests` (`Inventario → Catalogo`) y el grafo no puede tener ciclos. Motivos en [[decisiones/0006-kardex-inmutable-y-costeo]].

@@ -10,7 +10,7 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Tests | Sin `[Fact(Skip=...)]`, sin tests eliminados para dar verde | Revisión de diff |
 | Supresiones | Sin `#pragma warning disable` ni `[SuppressMessage]` nuevos sin ADR | Revisión de diff |
 | Dependencias | Licencia compatible con AGPL; sin vulnerabilidades conocidas altas | Dependabot + `dotnet list package --vulnerable` |
-| Arquitectura | `Core` sin dependencias; módulos no se referencian | NetArchTest |
+| Arquitectura | `Core` sin dependencias; los módulos solo dependen de lo que **declaran**, y el grafo no tiene ciclos (ADR 0006) | NetArchTest |
 | Portabilidad | Build y pruebas unitarias verdes en Ubuntu y Windows | Matriz de CI |
 | Aislamiento multiempresa | RLS activo y probado contra PostgreSQL real con un rol sin privilegios | Job de integración (el CI verifica el rol y que las pruebas se ejecuten) |
 | Política RLS por tabla | Toda entidad `IEntidadDeEmpresa`/`IRaizDeEmpresa` con `enable` + `force` + política que consulta la sesión | `PoliticasRlsTests`, derivado del modelo de EF |
@@ -21,4 +21,7 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Empresa de la petición | Solo desde el token validado, nunca desde entrada del cliente | `ContextoTenantHttp` + `AutenticacionTests` |
 | Escala de cantidades | Una `Cantidad` nunca excede los decimales de su unidad | `CantidadTests` + propiedades con FsCheck |
 | Aislamiento por la API | Una petición autenticada no alcanza datos de otra empresa (404, no 403) | `CatalogoTests` |
+| El kardex cuadra | La suma firmada de los movimientos es igual a las existencias, también bajo concurrencia | `InventarioTests` |
+| Kardex inmutable | Ni `UPDATE` ni `DELETE` sobre un movimiento, garantizado por disparador en la base | `InventarioTests` (SQL crudo) |
+| Existencias negativas | Solo con `inventario:ajustar`, y el movimiento queda marcado | `InventarioTests` |
 | Código generado | Las migraciones de EF se marcan `generated_code`; no cuenta como supresión | `.editorconfig` + ADR 0003 |

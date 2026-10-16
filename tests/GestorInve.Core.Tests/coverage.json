@@ -4,7 +4,7 @@
       "GestorInve.Core.Unidad": {
         "System.String GestorInve.Core.Unidad::get_Codigo()": {
           "Lines": {
-            "33": 3054
+            "33": 67083
           },
           "Branches": [
             {
@@ -21,13 +21,13 @@
               "EndOffset": 15,
               "Path": 1,
               "Ordinal": 1,
-              "Hits": 3051
+              "Hits": 67080
             }
           ]
         },
         "System.Int32 GestorInve.Core.Unidad::get_Decimales()": {
           "Lines": {
-            "35": 1832
+            "35": 15575
           },
           "Branches": []
         },
@@ -39,13 +39,13 @@
         },
         "System.Void GestorInve.Core.Unidad::.ctor(System.String,System.Int32)": {
           "Lines": {
-            "20": 1309,
-            "21": 1309,
-            "22": 1306,
-            "23": 1305,
-            "25": 1304,
-            "26": 1304,
-            "27": 1304
+            "20": 1312,
+            "21": 1312,
+            "22": 1309,
+            "23": 1308,
+            "25": 1307,
+            "26": 1307,
+            "27": 1307
           },
           "Branches": []
         }
@@ -53,19 +53,19 @@
       "GestorInve.Core.Cantidad": {
         "System.Decimal GestorInve.Core.Cantidad::get_Valor()": {
           "Lines": {
-            "76": 4229
+            "76": 87774
           },
           "Branches": []
         },
         "GestorInve.Core.Unidad GestorInve.Core.Cantidad::get_Unidad()": {
           "Lines": {
-            "79": 202
+            "79": 25450
           },
           "Branches": []
         },
         "System.Boolean GestorInve.Core.Cantidad::get_EsIndefinida()": {
           "Lines": {
-            "82": 4
+            "82": 25250
           },
           "Branches": []
         },
@@ -77,13 +77,13 @@
         },
         "GestorInve.Core.Cantidad GestorInve.Core.Cantidad::op_Addition(GestorInve.Core.Cantidad,GestorInve.Core.Cantidad)": {
           "Lines": {
-            "86": 907
+            "86": 12921
           },
           "Branches": []
         },
         "GestorInve.Core.Cantidad GestorInve.Core.Cantidad::op_Subtraction(GestorInve.Core.Cantidad,GestorInve.Core.Cantidad)": {
           "Lines": {
-            "88": 102
+            "88": 607
           },
           "Branches": []
         },
@@ -126,33 +126,33 @@
         },
         "System.Int32 GestorInve.Core.Cantidad::EscalaSignificativa(System.Decimal)": {
           "Lines": {
-            "110": 1327,
-            "111": 1327,
-            "113": 1327,
-            "114": 1327
+            "110": 15070,
+            "111": 15070,
+            "113": 15070,
+            "114": 15070
           },
           "Branches": []
         },
         "GestorInve.Core.Cantidad GestorInve.Core.Cantidad::Combinar(GestorInve.Core.Cantidad,GestorInve.Core.Cantidad,System.Decimal)": {
           "Lines": {
-            "117": 1009
+            "117": 13528
           },
           "Branches": []
         },
         "System.Nullable`1<GestorInve.Core.Unidad> GestorInve.Core.Cantidad::UnidadComun(GestorInve.Core.Cantidad,GestorInve.Core.Cantidad)": {
           "Lines": {
-            "125": 1009,
-            "126": 1009,
+            "125": 13528,
+            "126": 13528,
             "127": 102,
             "128": 102,
-            "131": 907,
+            "131": 13426,
             "132": 200,
             "133": 200,
-            "136": 707,
-            "137": 707,
-            "138": 707,
-            "139": 707,
-            "140": 1007
+            "136": 13226,
+            "137": 13226,
+            "138": 13226,
+            "139": 13226,
+            "140": 13526
           },
           "Branches": [
             {
@@ -169,7 +169,7 @@
               "EndOffset": 35,
               "Path": 1,
               "Ordinal": 1,
-              "Hits": 907
+              "Hits": 13426
             },
             {
               "Line": 131,
@@ -185,7 +185,7 @@
               "EndOffset": 69,
               "Path": 1,
               "Ordinal": 3,
-              "Hits": 707
+              "Hits": 13226
             },
             {
               "Line": 136,
@@ -201,7 +201,7 @@
               "EndOffset": 238,
               "Path": 1,
               "Ordinal": 5,
-              "Hits": 705
+              "Hits": 13224
             }
           ]
         },
@@ -230,18 +230,18 @@
         },
         "System.Void GestorInve.Core.Cantidad::.ctor(System.Decimal,GestorInve.Core.Unidad)": {
           "Lines": {
-            "53": 1328,
-            "54": 1328,
+            "53": 15071,
+            "54": 15071,
             "55": 1,
             "56": 1,
-            "59": 1327,
+            "59": 15070,
             "60": 103,
             "61": 103,
             "62": 103,
             "63": 103,
-            "66": 1224,
-            "67": 1224,
-            "68": 1224
+            "66": 14967,
+            "67": 14967,
+            "68": 14967
           },
           "Branches": [
             {
@@ -258,7 +258,7 @@
               "EndOffset": 34,
               "Path": 1,
               "Ordinal": 1,
-              "Hits": 1327
+              "Hits": 15070
             },
             {
               "Line": 59,
@@ -274,16 +274,16 @@
               "EndOffset": 173,
               "Path": 1,
               "Ordinal": 3,
-              "Hits": 1224
+              "Hits": 14967
             }
           ]
         },
         "System.Void GestorInve.Core.Cantidad::.ctor(System.Decimal,System.Nullable`1<GestorInve.Core.Unidad>,System.Boolean)": {
           "Lines": {
-            "71": 1410,
-            "72": 1410,
-            "73": 1410,
-            "74": 1410
+            "71": 13929,
+            "72": 13929,
+            "73": 13929,
+            "74": 13929
           },
           "Branches": []
         }
@@ -293,13 +293,13 @@
       "GestorInve.Core.Dinero": {
         "System.Decimal GestorInve.Core.Dinero::get_Monto()": {
           "Lines": {
-            "36": 33
+            "36": 46704
           },
           "Branches": []
         },
         "System.String GestorInve.Core.Dinero::get_Moneda()": {
           "Lines": {
-            "39": 3
+            "39": 34651
           },
           "Branches": [
             {
@@ -316,13 +316,13 @@
               "EndOffset": 15,
               "Path": 1,
               "Ordinal": 1,
-              "Hits": 1
+              "Hits": 34649
             }
           ]
         },
         "System.Boolean GestorInve.Core.Dinero::get_EsIndefinido()": {
           "Lines": {
-            "42": 4
+            "42": 24036
           },
           "Branches": []
         },
@@ -340,13 +340,13 @@
         },
         "GestorInve.Core.Dinero GestorInve.Core.Dinero::op_Multiply(GestorInve.Core.Dinero,System.Decimal)": {
           "Lines": {
-            "48": 2
+            "48": 104
           },
           "Branches": []
         },
         "GestorInve.Core.Dinero GestorInve.Core.Dinero::Redondear(System.Int32)": {
           "Lines": {
-            "52": 4
+            "52": 12120
           },
           "Branches": []
         },
@@ -442,14 +442,14 @@
         },
         "System.Void GestorInve.Core.Dinero::.ctor(System.Decimal,System.String)": {
           "Lines": {
-            "19": 30,
-            "20": 30,
-            "21": 28,
+            "19": 23779,
+            "20": 23779,
+            "21": 23777,
             "22": 3,
             "23": 3,
-            "26": 25,
-            "27": 25,
-            "28": 25
+            "26": 23774,
+            "27": 23774,
+            "28": 23774
           },
           "Branches": [
             {
@@ -458,7 +458,7 @@
               "EndOffset": 22,
               "Path": 0,
               "Ordinal": 0,
-              "Hits": 26
+              "Hits": 23775
             },
             {
               "Line": 21,
@@ -482,16 +482,335 @@
               "EndOffset": 82,
               "Path": 1,
               "Ordinal": 3,
-              "Hits": 25
+              "Hits": 23774
             }
           ]
         },
         "System.Void GestorInve.Core.Dinero::.ctor(System.Decimal,System.String,System.Boolean)": {
           "Lines": {
-            "31": 15,
-            "32": 15,
-            "33": 15,
-            "34": 15
+            "31": 12233,
+            "32": 12233,
+            "33": 12233,
+            "34": 12233
+          },
+          "Branches": []
+        }
+      }
+    },
+    "/home/user/gestor-inve/src/GestorInve.Core/SaldoValorizado.cs": {
+      "GestorInve.Core.SaldoValorizado": {
+        "GestorInve.Core.Cantidad GestorInve.Core.SaldoValorizado::get_Cantidad()": {
+          "Lines": {
+            "25": 61913
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Dinero GestorInve.Core.SaldoValorizado::get_CostoPromedio()": {
+          "Lines": {
+            "28": 36359
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.SaldoValorizado GestorInve.Core.SaldoValorizado::Vacio(GestorInve.Core.Unidad,System.String)": {
+          "Lines": {
+            "31": 1113
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.SaldoValorizado GestorInve.Core.SaldoValorizado::De(GestorInve.Core.Cantidad,GestorInve.Core.Dinero)": {
+          "Lines": {
+            "35": 3,
+            "36": 3,
+            "37": 1,
+            "38": 1,
+            "41": 2,
+            "42": 2
+          },
+          "Branches": [
+            {
+              "Line": 36,
+              "Offset": 20,
+              "EndOffset": 22,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 36,
+              "Offset": 20,
+              "EndOffset": 39,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 2
+            }
+          ]
+        },
+        "GestorInve.Core.Dinero GestorInve.Core.SaldoValorizado::CostoDeSalida()": {
+          "Lines": {
+            "45": 1
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Dinero GestorInve.Core.SaldoValorizado::Valorizado()": {
+          "Lines": {
+            "48": 102
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.SaldoValorizado GestorInve.Core.SaldoValorizado::AplicarEntrada(GestorInve.Core.Cantidad,GestorInve.Core.Dinero)": {
+          "Lines": {
+            "51": 12019,
+            "52": 12019,
+            "53": 12017,
+            "54": 12016,
+            "56": 12015,
+            "57": 1,
+            "58": 1,
+            "61": 12014,
+            "64": 12014,
+            "65": 1400,
+            "66": 1400,
+            "69": 10614,
+            "70": 10614,
+            "71": 10614,
+            "73": 10614,
+            "74": 12014
+          },
+          "Branches": [
+            {
+              "Line": 56,
+              "Offset": 50,
+              "EndOffset": 52,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 1
+            },
+            {
+              "Line": 56,
+              "Offset": 50,
+              "EndOffset": 69,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 12014
+            },
+            {
+              "Line": 64,
+              "Offset": 111,
+              "EndOffset": 113,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 1400
+            },
+            {
+              "Line": 64,
+              "Offset": 111,
+              "EndOffset": 130,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 10614
+            }
+          ]
+        },
+        "GestorInve.Core.SaldoValorizado GestorInve.Core.SaldoValorizado::AplicarSalida(GestorInve.Core.Cantidad)": {
+          "Lines": {
+            "78": 406,
+            "79": 406,
+            "80": 404,
+            "82": 404,
+            "83": 101,
+            "84": 101,
+            "85": 101,
+            "88": 303,
+            "89": 303
+          },
+          "Branches": [
+            {
+              "Line": 82,
+              "Offset": 49,
+              "EndOffset": 51,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 101
+            },
+            {
+              "Line": 82,
+              "Offset": 49,
+              "EndOffset": 151,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 303
+            }
+          ]
+        },
+        "GestorInve.Core.SaldoValorizado GestorInve.Core.SaldoValorizado::AplicarSalidaForzada(GestorInve.Core.Cantidad)": {
+          "Lines": {
+            "97": 202,
+            "98": 202,
+            "99": 202,
+            "101": 202,
+            "102": 202
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Dinero GestorInve.Core.SaldoValorizado::Redondear(GestorInve.Core.Dinero)": {
+          "Lines": {
+            "104": 12014
+          },
+          "Branches": []
+        },
+        "System.Void GestorInve.Core.SaldoValorizado::ExigirPositiva(GestorInve.Core.Cantidad,System.String)": {
+          "Lines": {
+            "107": 12627,
+            "108": 12627,
+            "109": 4,
+            "110": 4,
+            "112": 12623
+          },
+          "Branches": [
+            {
+              "Line": 108,
+              "Offset": 20,
+              "EndOffset": 22,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 4
+            },
+            {
+              "Line": 108,
+              "Offset": 20,
+              "EndOffset": 35,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 12623
+            }
+          ]
+        },
+        "System.Void GestorInve.Core.SaldoValorizado::ExigirMismaUnidad(GestorInve.Core.Cantidad)": {
+          "Lines": {
+            "115": 12623,
+            "116": 12623,
+            "117": 1,
+            "118": 1,
+            "119": 1,
+            "121": 12622
+          },
+          "Branches": [
+            {
+              "Line": 116,
+              "Offset": 15,
+              "EndOffset": 17,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 12623
+            },
+            {
+              "Line": 116,
+              "Offset": 24,
+              "EndOffset": 26,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 12623
+            },
+            {
+              "Line": 116,
+              "Offset": 15,
+              "EndOffset": 70,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 116,
+              "Offset": 24,
+              "EndOffset": 70,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 0
+            },
+            {
+              "Line": 116,
+              "Offset": 73,
+              "EndOffset": 75,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 116,
+              "Offset": 73,
+              "EndOffset": 191,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 12622
+            }
+          ]
+        },
+        "System.Void GestorInve.Core.SaldoValorizado::ExigirMismaMoneda(GestorInve.Core.Dinero)": {
+          "Lines": {
+            "124": 12016,
+            "125": 12016,
+            "126": 1,
+            "127": 1,
+            "128": 1,
+            "130": 12015
+          },
+          "Branches": [
+            {
+              "Line": 125,
+              "Offset": 15,
+              "EndOffset": 17,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 12016
+            },
+            {
+              "Line": 125,
+              "Offset": 24,
+              "EndOffset": 26,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 12016
+            },
+            {
+              "Line": 125,
+              "Offset": 15,
+              "EndOffset": 54,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 0
+            },
+            {
+              "Line": 125,
+              "Offset": 24,
+              "EndOffset": 54,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 0
+            },
+            {
+              "Line": 125,
+              "Offset": 57,
+              "EndOffset": 59,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 1
+            },
+            {
+              "Line": 125,
+              "Offset": 57,
+              "EndOffset": 159,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 12015
+            }
+          ]
+        },
+        "System.Void GestorInve.Core.SaldoValorizado::.ctor(GestorInve.Core.Cantidad,GestorInve.Core.Dinero)": {
+          "Lines": {
+            "17": 13634,
+            "18": 13634,
+            "19": 13634,
+            "20": 13634
           },
           "Branches": []
         }

@@ -2,6 +2,7 @@ using System.Text;
 using GestorInve.Api;
 using GestorInve.Api.Autenticacion;
 using GestorInve.Api.Catalogo;
+using GestorInve.Api.Inventario;
 using GestorInve.Core;
 using GestorInve.Composicion;
 using GestorInve.Core.Seguridad;
@@ -34,6 +35,7 @@ if (conPersistencia)
 
     builder.Services.AddScoped<ServicioAltaEmpresa>();
     builder.Services.AddScoped<ServicioAutenticacion>();
+    builder.Services.AddScoped<GestorInve.Inventario.ServicioMovimientos>();
 }
 
 var jwt = builder.Configuration.GetSection(OpcionesJwt.Seccion).Get<OpcionesJwt>() ?? new OpcionesJwt();
@@ -98,6 +100,7 @@ if (conPersistencia)
     app.MapEndpointsAutenticacion();
     app.MapEndpointsEmpresa();
     app.MapEndpointsCatalogo();
+    app.MapEndpointsInventario();
 }
 
 await app.RunAsync();
