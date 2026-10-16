@@ -1,0 +1,212 @@
+{
+  "GestorInve.Core.dll": {
+    "/home/user/gestor-inve/src/GestorInve.Core/Dinero.cs": {
+      "GestorInve.Core.Dinero": {
+        "System.Decimal GestorInve.Core.Dinero::get_Monto()": {
+          "Lines": {
+            "36": 33
+          },
+          "Branches": []
+        },
+        "System.String GestorInve.Core.Dinero::get_Moneda()": {
+          "Lines": {
+            "39": 3
+          },
+          "Branches": [
+            {
+              "Line": 39,
+              "Offset": 7,
+              "EndOffset": 9,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 2
+            },
+            {
+              "Line": 39,
+              "Offset": 7,
+              "EndOffset": 15,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.Boolean GestorInve.Core.Dinero::get_EsIndefinido()": {
+          "Lines": {
+            "42": 4
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Dinero GestorInve.Core.Dinero::op_Addition(GestorInve.Core.Dinero,GestorInve.Core.Dinero)": {
+          "Lines": {
+            "44": 8
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Dinero GestorInve.Core.Dinero::op_Subtraction(GestorInve.Core.Dinero,GestorInve.Core.Dinero)": {
+          "Lines": {
+            "46": 3
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Dinero GestorInve.Core.Dinero::op_Multiply(GestorInve.Core.Dinero,System.Decimal)": {
+          "Lines": {
+            "48": 2
+          },
+          "Branches": []
+        },
+        "GestorInve.Core.Dinero GestorInve.Core.Dinero::Redondear(System.Int32)": {
+          "Lines": {
+            "52": 4
+          },
+          "Branches": []
+        },
+        "System.String GestorInve.Core.Dinero::ToString()": {
+          "Lines": {
+            "54": 1,
+            "55": 1,
+            "56": 1
+          },
+          "Branches": [
+            {
+              "Line": 54,
+              "Offset": 6,
+              "EndOffset": 8,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 0
+            },
+            {
+              "Line": 54,
+              "Offset": 6,
+              "EndOffset": 75,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 1
+            }
+          ]
+        },
+        "System.String GestorInve.Core.Dinero::MonedaComun(GestorInve.Core.Dinero,GestorInve.Core.Dinero)": {
+          "Lines": {
+            "63": 11,
+            "64": 11,
+            "65": 2,
+            "66": 2,
+            "69": 9,
+            "70": 2,
+            "71": 2,
+            "74": 7,
+            "75": 7,
+            "76": 7,
+            "77": 9
+          },
+          "Branches": [
+            {
+              "Line": 64,
+              "Offset": 12,
+              "EndOffset": 14,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 2
+            },
+            {
+              "Line": 64,
+              "Offset": 12,
+              "EndOffset": 27,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 9
+            },
+            {
+              "Line": 69,
+              "Offset": 38,
+              "EndOffset": 40,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 2
+            },
+            {
+              "Line": 69,
+              "Offset": 38,
+              "EndOffset": 50,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 7
+            },
+            {
+              "Line": 74,
+              "Offset": 67,
+              "EndOffset": 69,
+              "Path": 0,
+              "Ordinal": 4,
+              "Hits": 2
+            },
+            {
+              "Line": 74,
+              "Offset": 67,
+              "EndOffset": 159,
+              "Path": 1,
+              "Ordinal": 5,
+              "Hits": 5
+            }
+          ]
+        },
+        "System.Void GestorInve.Core.Dinero::.ctor(System.Decimal,System.String)": {
+          "Lines": {
+            "19": 30,
+            "20": 30,
+            "21": 28,
+            "22": 3,
+            "23": 3,
+            "26": 25,
+            "27": 25,
+            "28": 25
+          },
+          "Branches": [
+            {
+              "Line": 21,
+              "Offset": 20,
+              "EndOffset": 22,
+              "Path": 0,
+              "Ordinal": 0,
+              "Hits": 26
+            },
+            {
+              "Line": 21,
+              "Offset": 20,
+              "EndOffset": 60,
+              "Path": 1,
+              "Ordinal": 1,
+              "Hits": 2
+            },
+            {
+              "Line": 21,
+              "Offset": 63,
+              "EndOffset": 65,
+              "Path": 0,
+              "Ordinal": 2,
+              "Hits": 3
+            },
+            {
+              "Line": 21,
+              "Offset": 63,
+              "EndOffset": 82,
+              "Path": 1,
+              "Ordinal": 3,
+              "Hits": 25
+            }
+          ]
+        },
+        "System.Void GestorInve.Core.Dinero::.ctor(System.Decimal,System.String,System.Boolean)": {
+          "Lines": {
+            "31": 15,
+            "32": 15,
+            "33": 15,
+            "34": 15
+          },
+          "Branches": []
+        }
+      }
+    }
+  }
+}
