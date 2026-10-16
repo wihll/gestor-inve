@@ -151,18 +151,6 @@ jobs:
             -c "create database gestorinve owner gestorinve;"
           test "$(psql -h 127.0.0.1 -U postgres -tAc \
             "select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'")" = "f"
-      - name: Migrar la base de datos
-        env:
-          GESTORINVE_CONEXION: ${{ env.CADENA }}
-        run: |
-          set -euo pipefail
-          dotnet tool install --global dotnet-ef --version 10.0.12
-          export PATH="$PATH:$HOME/.dotnet/tools"
-          # Sin esto la Api arrancaría «sana» contra una base vacía y el e2e fallaría al
-          # primer alta: la Api no migra en el arranque a propósito.
-          dotnet ef database update \
-            --project src/GestorInve.Persistencia \
-            --startup-project src/GestorInve.Api
       - name: Compilar
         run: |
           set -euo pipefail
@@ -174,7 +162,11 @@ jobs:
           set -euo pipefail
           # Api y web se arrancan **en este mismo paso**: un proceso en segundo plano no
           # sobrevive al final del paso que lo lanzó.
+          # `GESTORINVE_MIGRAR=true` es el mismo camino de actualización que usan el
+          # contenedor y el instalador; sin esquema la Api arrancaría «sana» contra una base
+          # vacía y el e2e fallaría al primer alta. `/ready` solo responde tras migrar.
           ASPNETCORE_URLS=http://127.0.0.1:5080 \
+          GESTORINVE_MIGRAR=true \
           ConnectionStrings__GestorInve="$CADENA" \
           Jwt__Clave="$CLAVE_JWT" \
             dotnet src/GestorInve.Api/bin/Release/net10.0/GestorInve.Api.dll > api.log 2>&1 &

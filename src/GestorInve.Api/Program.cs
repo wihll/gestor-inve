@@ -89,6 +89,37 @@ if (conPersistencia)
 
 var app = builder.Build();
 
+// Aplicar migraciones al arrancar es **opcional y explícito** (`GESTORINVE_MIGRAR=true`).
+// Nunca por omisión: en una instalación real, migrar sin que nadie lo haya pedido puede
+// bloquear tablas o aplicar un cambio de esquema a destiempo. Con la bandera puesta, el
+// instalador, el contenedor y el CI tienen un único camino de actualización, y queda registrado.
+if (conPersistencia
+    && app.Configuration.GetValue("GESTORINVE_MIGRAR", defaultValue: false))
+{
+    await using var alcance = app.Services.CreateAsyncScope();
+    var contexto = alcance.ServiceProvider.GetRequiredService<GestorInveDbContext>();
+    var registro = alcance.ServiceProvider.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("GestorInve.Migraciones");
+
+    var pendientes = (await contexto.Database.GetPendingMigrationsAsync()).ToList();
+
+    if (pendientes.Count > 0)
+    {
+        // El `IsEnabled` no es decorativo: CA1873 exige no pagar el `string.Join` si el nivel
+        // está apagado, y la traza de la actualización se consulta justo cuando algo falló.
+        if (registro.IsEnabled(LogLevel.Information))
+        {
+            registro.Aplicando(pendientes.Count, string.Join(", ", pendientes));
+        }
+
+        await contexto.Database.MigrateAsync();
+    }
+    else
+    {
+        registro.SinPendientes();
+    }
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
