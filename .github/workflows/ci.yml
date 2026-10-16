@@ -183,19 +183,40 @@ jobs:
             return 1
           }
 
+          # El diagnóstico se emite como **anotaciones** y no solo por stdout: el registro
+          # completo del job y los artefactos viven en hosts que no siempre son alcanzables,
+          # mientras que las anotaciones se leen por la API de GitHub. Sin esto, un fallo del
+          # e2e se queda en «exit code 1» y hay que adivinar la causa.
+          anotar() {
+            [ -s "$2" ] || return 0
+            echo "::error title=$1::$(tail -c 1800 "$2" | tr '\n%\r' '  ')"
+          }
+
           if ! esperar http://127.0.0.1:5080/ready; then
-            echo "::error::La Api no respondió en /ready"; cat api.log; exit 1
+            anotar "La Api no respondió en /ready" api.log; cat api.log; exit 1
           fi
 
           if ! esperar http://127.0.0.1:4173/; then
-            echo "::error::La web no respondió"; cat web.log; exit 1
+            anotar "La web no respondió" web.log; cat web.log; exit 1
           fi
 
-          cd web && npx playwright test
-          codigo=$?
+          # `set +e` alrededor de Playwright: con `-e`, un fallo cortaría el paso aquí mismo y
+          # ni se recogería el rastro ni se pararían los procesos. Era el agujero del intento
+          # anterior, donde `codigo=$?` nunca llegaba a ejecutarse.
+          set +e
+          (cd web && npx playwright test 2>&1) | tee playwright.log
+          codigo=${PIPESTATUS[0]}
+          set -e
 
           kill $api $web 2>/dev/null || true
-          exit $codigo
+
+          if [ "$codigo" -ne 0 ]; then
+            anotar "Playwright" playwright.log
+            anotar "Registro de la Api" api.log
+            anotar "Registro de la web" web.log
+          fi
+
+          exit "$codigo"
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
@@ -204,3 +225,4 @@ jobs:
             web/test-results
             api.log
             web.log
+            playwright.log
