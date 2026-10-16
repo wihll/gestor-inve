@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/GestorInve.Api/GestorInve.Api.csproj" />
+    <Project Path="src/GestorInve.Composicion/GestorInve.Composicion.csproj" />
     <Project Path="src/GestorInve.Core/GestorInve.Core.csproj" />
     <Project Path="src/GestorInve.Persistencia/GestorInve.Persistencia.csproj" />
     <Project Path="src/GestorInve.Worker/GestorInve.Worker.csproj" />
@@ -18,6 +19,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/GestorInve.Api.Tests/GestorInve.Api.Tests.csproj" />
     <Project Path="tests/GestorInve.Architecture.Tests/GestorInve.Architecture.Tests.csproj" />
+    <Project Path="tests/GestorInve.Catalogo.Tests/GestorInve.Catalogo.Tests.csproj" />
     <Project Path="tests/GestorInve.Core.Tests/GestorInve.Core.Tests.csproj" />
     <Project Path="tests/GestorInve.Persistencia.Tests/GestorInve.Persistencia.Tests.csproj" />
     <Project Path="tests/GestorInve.Seguridad.Tests/GestorInve.Seguridad.Tests.csproj" />

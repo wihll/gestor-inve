@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\GestorInve.Persistencia\GestorInve.Persistencia.csproj" />
     <ProjectReference Include="..\..\src\Modules\GestorInve.Seguridad\GestorInve.Seguridad.csproj" />
+    <ProjectReference Include="..\..\src\GestorInve.Composicion\GestorInve.Composicion.csproj" />
   </ItemGroup>
 
 </Project>

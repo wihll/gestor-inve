@@ -36,3 +36,10 @@ Pendiente de ratificar en [[decisiones/0001-stack]].
 - `Api/Autenticacion`: JWT HS256 de 15 min sin margen de reloj, `/auth/login`, `/auth/refresh` (rotación y revocación de familia al detectar reutilización), `/auth/logout`, `/auth/yo`, `/empresas`. `ContextoTenantHttp` deduce la empresa **solo del token validado**.
 - El arranque falla si falta la clave de firma o mide menos de 32 bytes.
 - Detalle y motivos en [[decisiones/0004-autenticacion-y-autorizacion]].
+
+## Catálogo (H6)
+- `src/GestorInve.Composicion` — **raíz de composición**: la única lista de módulos con modelo de datos (`ModulosDePersistencia.Todos`). Es el único proyecto que referencia a todos los módulos.
+- `src/Modules/GestorInve.Catalogo` — `UnidadMedida`, `Categoria`, `Producto`, `Variante`, `CodigoBarras`. Esquema `catalogo`, con RLS como el resto.
+- `Core` añade `Unidad` y `Cantidad`: decimal con unidad, que rechaza más decimales de los que la unidad admite y redondea alejándose de cero al escalar.
+- **La variante lleva el stock, nunca el producto**: el kardex de H7 apuntará a variantes. Motivos y ruta hacia las conversiones de unidad en [[decisiones/0005-catalogo-variantes-y-unidades]].
+- `src/GestorInve.Api/Catalogo` — CRUD con permisos `catalogo:*`. Primer uso real de `ContextoTenantHttp` con datos de negocio; hay pruebas de que una empresa no alcanza los datos de otra **a través de la API**.

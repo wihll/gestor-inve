@@ -1,8 +1,11 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 using GestorInve.Persistencia;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 
 namespace GestorInve.Api.Tests;
 
@@ -36,6 +39,33 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 
     /// <summary>NIT único por prueba: el directorio de empresas lo exige único y las pruebas comparten base.</summary>
     public static string NitNuevo() => $"NIT{Guid.NewGuid():N}"[..15];
+
+    /// <summary>
+    /// Reemite un token válido (misma firma, mismo usuario y empresa) **sin las reclamaciones de
+    /// permiso**, para comprobar que las políticas de autorización se aplican de verdad y no
+    /// basta con estar autenticado. Se firma aquí porque no hay endpoint que emita tokens
+    /// degradados: crearlo solo para las pruebas sería una puerta que no debe existir.
+    /// </summary>
+    public static string TokenSinPermisos(string tokenAcceso)
+    {
+        var original = new JwtSecurityTokenHandler().ReadJwtToken(tokenAcceso);
+
+        var claims = original.Claims
+            .Where(c => c.Type != Api.Autenticacion.ClaimsGestorInve.Permiso)
+            .ToList();
+
+        var clave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ClaveFirma));
+
+        var token = new JwtSecurityToken(
+            issuer: original.Issuer,
+            audience: original.Audiences.First(),
+            claims: claims,
+            notBefore: original.ValidFrom,
+            expires: original.ValidTo,
+            signingCredentials: new SigningCredentials(clave, SecurityAlgorithms.HmacSha256));
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
