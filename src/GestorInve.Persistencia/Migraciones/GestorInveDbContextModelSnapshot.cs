@@ -434,6 +434,10 @@ namespace GestorInve.Persistencia.Migraciones
                         .HasColumnType("uuid")
                         .HasColumnName("empresa_id");
 
+                    b.Property<Guid?>("LoteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lote_id");
+
                     b.Property<string>("Moneda")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -464,14 +468,78 @@ namespace GestorInve.Persistencia.Migraciones
                     b.HasIndex("BodegaId")
                         .HasDatabaseName("ix_existencias_bodega_id");
 
+                    b.HasIndex("LoteId")
+                        .HasDatabaseName("ix_existencias_lote_id");
+
                     b.HasIndex("UbicacionId")
                         .HasDatabaseName("ix_existencias_ubicacion_id");
 
-                    b.HasIndex("VarianteId", "BodegaId", "UbicacionId")
+                    b.HasIndex("VarianteId", "BodegaId", "UbicacionId", "LoteId")
                         .IsUnique()
-                        .HasDatabaseName("ix_existencias_variante_id_bodega_id_ubicacion_id");
+                        .HasDatabaseName("ix_existencias_celda");
 
                     b.ToTable("existencias", "inventario");
+                });
+
+            modelBuilder.Entity("GestorInve.Inventario.Lote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset?>("ActualizadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actualizado_en");
+
+                    b.Property<string>("ActualizadoPor")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("actualizado_por");
+
+                    b.Property<string>("Codigo")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("codigo");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("creado_en");
+
+                    b.Property<string>("CreadoPor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("creado_por");
+
+                    b.Property<Guid>("EmpresaId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("empresa_id");
+
+                    b.Property<bool>("EsSerial")
+                        .HasColumnType("boolean")
+                        .HasColumnName("es_serial");
+
+                    b.Property<Guid>("VarianteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("variante_id");
+
+                    b.Property<DateOnly?>("Vencimiento")
+                        .HasColumnType("date")
+                        .HasColumnName("vencimiento");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lotes");
+
+                    b.HasIndex("VarianteId", "Codigo")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lotes_variante_id_codigo");
+
+                    b.HasIndex("EmpresaId", "VarianteId", "Vencimiento")
+                        .HasDatabaseName("ix_lotes_empresa_id_variante_id_vencimiento");
+
+                    b.ToTable("lotes", "inventario");
                 });
 
             modelBuilder.Entity("GestorInve.Inventario.Movimiento", b =>
@@ -509,6 +577,10 @@ namespace GestorInve.Persistencia.Migraciones
                         .HasColumnType("boolean")
                         .HasColumnName("forzado_negativo");
 
+                    b.Property<Guid?>("LoteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lote_id");
+
                     b.Property<string>("Moneda")
                         .IsRequired()
                         .HasMaxLength(3)
@@ -523,6 +595,10 @@ namespace GestorInve.Persistencia.Migraciones
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("observacion");
+
+                    b.Property<Guid?>("OperacionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operacion_id");
 
                     b.Property<string>("Referencia")
                         .HasMaxLength(100)
@@ -577,9 +653,15 @@ namespace GestorInve.Persistencia.Migraciones
                     b.HasIndex("BodegaId")
                         .HasDatabaseName("ix_movimientos_bodega_id");
 
+                    b.HasIndex("LoteId")
+                        .HasDatabaseName("ix_movimientos_lote_id");
+
                     b.HasIndex("MovimientoReversadoId")
                         .IsUnique()
                         .HasDatabaseName("ix_movimientos_movimiento_reversado_id");
+
+                    b.HasIndex("OperacionId")
+                        .HasDatabaseName("ix_movimientos_operacion_id");
 
                     b.HasIndex("TrasladoId")
                         .HasDatabaseName("ix_movimientos_traslado_id");
@@ -1053,6 +1135,12 @@ namespace GestorInve.Persistencia.Migraciones
                         .IsRequired()
                         .HasConstraintName("fk_existencias_bodegas_bodega_id");
 
+                    b.HasOne("GestorInve.Inventario.Lote", null)
+                        .WithMany()
+                        .HasForeignKey("LoteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_existencias_lotes_lote_id");
+
                     b.HasOne("GestorInve.Inventario.Ubicacion", null)
                         .WithMany()
                         .HasForeignKey("UbicacionId")
@@ -1068,6 +1156,16 @@ namespace GestorInve.Persistencia.Migraciones
                         .HasConstraintName("fk_existencias_variantes_variante_id");
                 });
 
+            modelBuilder.Entity("GestorInve.Inventario.Lote", b =>
+                {
+                    b.HasOne("GestorInve.Catalogo.Variante", null)
+                        .WithMany()
+                        .HasForeignKey("VarianteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_lotes_variantes_variante_id");
+                });
+
             modelBuilder.Entity("GestorInve.Inventario.Movimiento", b =>
                 {
                     b.HasOne("GestorInve.Inventario.Bodega", null)
@@ -1076,6 +1174,12 @@ namespace GestorInve.Persistencia.Migraciones
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_movimientos_bodegas_bodega_id");
+
+                    b.HasOne("GestorInve.Inventario.Lote", null)
+                        .WithMany()
+                        .HasForeignKey("LoteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_movimientos_lotes_lote_id");
 
                     b.HasOne("GestorInve.Inventario.Movimiento", null)
                         .WithMany()

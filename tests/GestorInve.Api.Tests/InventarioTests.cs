@@ -264,7 +264,7 @@ public class InventarioTests(ApiFixture api)
     }
 
     [Fact]
-    public async Task Un_producto_que_exige_lote_rechaza_el_movimiento_sin_perder_la_trazabilidad()
+    public async Task Una_entrada_de_un_producto_con_lote_sin_indicarlo_se_rechaza()
     {
         var cliente = await ClienteDeEmpresaNuevaAsync();
         var escenario = await EscenarioAsync(cliente, exigeLote: true);
@@ -273,7 +273,9 @@ public class InventarioTests(ApiFixture api)
             "/api/inventario/movimientos",
             Peticion(escenario, TipoMovimiento.Entrada, 10m, 1000m));
 
-        Assert.Equal(HttpStatusCode.NotImplemented, respuesta.StatusCode);
+        // Antes de H7b esto era un 501 («no implementado»); ahora es un 400, porque la
+        // trazabilidad existe y lo que falta es el dato.
+        Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
     }
 
     [Fact]
@@ -475,7 +477,11 @@ public class InventarioTests(ApiFixture api)
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
 
-        return (await respuesta.Content.ReadFromJsonAsync<RespuestaMovimiento>(ApiFixture.Json))!;
+        // Desde H7b la respuesta es una **lista**: una salida FEFO puede partirse en varios
+        // asientos. Aquí se espera uno, y `Single` lo exige en vez de dar por bueno el primero.
+        var movimientos = (await respuesta.Content.ReadFromJsonAsync<List<RespuestaMovimiento>>(ApiFixture.Json))!;
+
+        return Assert.Single(movimientos);
     }
 
     private static async Task<RespuestaExistencia> ExistenciaAsync(HttpClient cliente, Escenario escenario)

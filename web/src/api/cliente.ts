@@ -18,6 +18,8 @@ export type RespuestaMovimiento = components["schemas"]["RespuestaMovimiento"];
 export type PeticionMovimiento = components["schemas"]["PeticionMovimiento"];
 export type RespuestaExistencia = components["schemas"]["RespuestaExistencia"];
 export type TipoMovimiento = components["schemas"]["TipoMovimiento"];
+export type RespuestaLote = components["schemas"]["RespuestaLote"];
+export type PeticionLote = components["schemas"]["PeticionLote"];
 
 /// Comprobación en tiempo de compilación de que las rutas que usamos existen en el contrato.
 type RutasUsadas =
@@ -31,7 +33,9 @@ type RutasUsadas =
   | "/api/inventario/bodegas"
   | "/api/inventario/movimientos"
   | "/api/inventario/existencias"
-  | "/api/inventario/kardex";
+  | "/api/inventario/kardex"
+  | "/api/inventario/lotes"
+  | "/api/inventario/variantes/{varianteId}/lotes";
 
 type Verifica<T extends keyof paths> = T;
 export type RutasVerificadas = Verifica<RutasUsadas>;

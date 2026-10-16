@@ -918,6 +918,113 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inventario/lotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lotes y seriales, en orden de vencimiento más próximo primero. */
+        get: {
+            parameters: {
+                query?: {
+                    varianteId?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RespuestaLote"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inventario/variantes/{varianteId}/lotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Crea un lote o un serial para una variante. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    varianteId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PeticionLote"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RespuestaLote"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/inventario/movimientos": {
         parameters: {
             query?: never;
@@ -927,7 +1034,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Registra una entrada, una salida o un ajuste. */
+        /** Registra una entrada, una salida o un ajuste. Una salida sin lote aplica FEFO. */
         post: {
             parameters: {
                 query?: never;
@@ -947,7 +1054,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["RespuestaMovimiento"];
+                        "application/json": components["schemas"]["RespuestaMovimiento"][];
                     };
                 };
                 /** @description Bad Request */
@@ -979,15 +1086,6 @@ export interface paths {
                 };
                 /** @description Conflict */
                 409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Not Implemented */
-                501: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1233,6 +1331,12 @@ export interface components {
             correo: string;
             contrasena: string;
         };
+        PeticionLote: {
+            codigo: string;
+            /** Format: date */
+            vencimiento: null | string;
+            esSerial: boolean;
+        };
         PeticionMovimiento: {
             tipo: components["schemas"]["TipoMovimiento"];
             /** Format: uuid */
@@ -1249,6 +1353,8 @@ export interface components {
             fecha: null | string;
             referencia: null | string;
             observacion: null | string;
+            /** Format: uuid */
+            loteId?: null | string;
         };
         PeticionProducto: {
             sku: string;
@@ -1285,6 +1391,8 @@ export interface components {
             fecha: null | string;
             referencia: null | string;
             observacion: null | string;
+            /** Format: uuid */
+            loteId?: null | string;
         };
         PeticionUbicacion: {
             codigo: string;
@@ -1348,6 +1456,19 @@ export interface components {
             /** Format: double */
             valorizado: number | string;
             moneda: string;
+            /** Format: uuid */
+            loteId: null | string;
+        };
+        RespuestaLote: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            varianteId: string;
+            codigo: string;
+            /** Format: date */
+            vencimiento: null | string;
+            esSerial: boolean;
+            vencido: boolean;
         };
         RespuestaMovimiento: {
             /** Format: uuid */
@@ -1381,6 +1502,10 @@ export interface components {
             /** Format: uuid */
             movimientoReversadoId: null | string;
             forzadoNegativo: boolean;
+            /** Format: uuid */
+            loteId: null | string;
+            /** Format: uuid */
+            operacionId: null | string;
         };
         RespuestaProducto: {
             /** Format: uuid */

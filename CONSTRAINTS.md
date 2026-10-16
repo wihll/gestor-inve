@@ -31,6 +31,11 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Un solo camino de actualización | El esquema se aplica con `GESTORINVE_MIGRAR=true`; nunca por omisión. Lo usan el CI, el contenedor y el instalador | Job `compose` del CI (cuenta las tablas) + ADR 0008 |
 | Rol de la base en la instalación | `scripts/init-db.sh` crea el rol sin `SUPERUSER` ni `BYPASSRLS` y **aborta** si quedó privilegiado | El propio script + job `compose` |
 | Secretos sin valor por omisión | El compose falla si faltan `POSTGRES_CLAVE`, `GESTORINVE_CLAVE_BD` o `JWT_CLAVE` | Job `compose` (comprobación invertida: sin `.env` debe fallar) |
+| Trazabilidad | Un producto que exige lote o serial no admite movimientos sin lote, y uno que no la exige no admite movimientos con lote | `LotesTests` |
+| El kardex cuadra por lote | La suma firmada del libro **de cada celda** (variante, bodega, ubicación, lote) es igual a su existencia | `LotesTests` + pantalla de kardex |
+| Celda única | Índice único con `nulls not distinct`: no pueden existir dos filas de existencias para la misma celda sin lote | Migración `Lotes` + `InventarioTests` |
+| Mercancía vencida | Una salida de un lote vencido se rechaza; la baja solo entra como ajuste negativo, y FEFO no elige lotes vencidos | `LotesTests` |
+| Seriales | Cantidad exactamente 1, y un serial no puede tener existencia en dos celdas | `LotesTests` |
 | Rutas del SPA y de la Api | La Api vive bajo `/api`; abrir una ruta del enrutador del cliente directamente la sirve el servidor web, no la Api | Prueba e2e «ruta del SPA» + job `compose` |
 | Despliegue ejecutable | El `docker-compose.yml` se construye y se levanta en cada PR; la web y la Api responden en el mismo origen | Job `compose` del CI |
 | Análisis de seguridad | CodeQL con `security-extended` sobre C#, TypeScript y los propios workflows | `codeql.yml`, semanal y por PR |

@@ -164,6 +164,8 @@ function FormularioProducto({
   const [nombre, setNombre] = useState("");
   const [unidadMedidaId, setUnidad] = useState("");
   const [atributos, setAtributos] = useState("");
+  const [exigeLote, setExigeLote] = useState(false);
+  const [exigeSerial, setExigeSerial] = useState(false);
 
   const sinUnidades = unidades.length === 0;
 
@@ -184,8 +186,8 @@ function FormularioProducto({
               atributos.trim() === ""
                 ? null
                 : atributos.split(",").map((a) => a.trim()).filter((a) => a !== ""),
-            exigeLote: false,
-            exigeSerial: false,
+            exigeLote,
+            exigeSerial,
           });
           setSku("");
           setNombre("");
@@ -224,6 +226,40 @@ function FormularioProducto({
             placeholder="talla, color"
           />
         </Campo>
+
+        {/* Esto se decide al crear el producto y marca cómo se mueve desde entonces: con
+            trazabilidad, **todo** movimiento tiene que indicar su lote o su serial. */}
+        <label className="campo-casilla">
+          <input
+            type="checkbox"
+            checked={exigeLote}
+            onChange={(e) => {
+              setExigeLote(e.target.checked);
+
+              // Lote y serial son excluyentes en la práctica: un serial ya identifica la unidad
+              // una por una, así que pedir además un lote sería pedir el mismo dato dos veces.
+              if (e.target.checked) {
+                setExigeSerial(false);
+              }
+            }}
+          />
+          <span>Exige lote (mercancía que vence o se rastrea por tanda)</span>
+        </label>
+
+        <label className="campo-casilla">
+          <input
+            type="checkbox"
+            checked={exigeSerial}
+            onChange={(e) => {
+              setExigeSerial(e.target.checked);
+
+              if (e.target.checked) {
+                setExigeLote(false);
+              }
+            }}
+          />
+          <span>Exige serial (cada unidad tiene su número)</span>
+        </label>
 
         <button type="submit" disabled={enviando || sinUnidades}>
           Crear producto

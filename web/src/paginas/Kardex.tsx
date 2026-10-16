@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSesion } from "../sesion/SesionContexto";
 import type {
-  RespuestaVariante, RespuestaMovimiento, RespuestaProducto } from "../api/cliente";
+  RespuestaVariante, RespuestaMovimiento, RespuestaProducto, RespuestaLote } from "../api/cliente";
 import { Campo, Cargando, Tarjeta, Vacio } from "../componentes/Piezas";
 import {
   aNumero,
@@ -22,6 +22,11 @@ export function Kardex() {
     queryFn: () => cliente.get<RespuestaProducto[]>("/api/catalogo/productos"),
   });
 
+  const lotes = useQuery({
+    queryKey: ["lotes"],
+    queryFn: () => cliente.get<RespuestaLote[]>("/api/inventario/lotes"),
+  });
+
   const movimientos = useQuery({
     queryKey: ["kardex", varianteId],
     queryFn: () => cliente.get<RespuestaMovimiento[]>(`/api/inventario/kardex?varianteId=${varianteId}`),
@@ -39,12 +44,34 @@ export function Kardex() {
 
   // El acumulado se recalcula en la pantalla y se compara con el saldo que guardó el
   // servidor: si no coinciden, el libro está descuadrado y hay que verlo, no esconderlo.
-  const acumulado = filas.reduce(
-    (suma, fila) => suma + aNumero(fila.cantidad) * signoDeTipo(fila.tipo ?? ""),
-    0,
-  );
-  const ultimoSaldo = aNumero(filas.at(-1)?.saldoCantidadDespues);
-  const descuadrado = filas.length > 0 && Math.abs(acumulado - ultimoSaldo) > 0.000001;
+  //
+  // La comparación es **por celda** —bodega, ubicación y lote—, no sobre el total. El saldo que
+  // guarda cada asiento es el de su celda, así que con dos lotes el total de la variante nunca
+  // coincidiría con el saldo de la última fila y la pantalla gritaría un descuadre inexistente.
+  // Peor: en sentido contrario, dos celdas con errores que se compensan darían un total
+  // correcto y el descuadre real pasaría desapercibido.
+  const celdaDe = (fila: RespuestaMovimiento) =>
+    `${fila.bodegaId ?? ""}|${fila.ubicacionId ?? ""}|${fila.loteId ?? ""}`;
+
+  const porCelda = new Map<string, RespuestaMovimiento[]>();
+
+  for (const fila of filas) {
+    const clave = celdaDe(fila);
+    porCelda.set(clave, [...(porCelda.get(clave) ?? []), fila]);
+  }
+
+  const firmada = (lista: RespuestaMovimiento[]) =>
+    lista.reduce((suma, fila) => suma + aNumero(fila.cantidad) * signoDeTipo(fila.tipo ?? ""), 0);
+
+  const acumulado = firmada(filas);
+
+  const celdasDescuadradas = [...porCelda.values()].filter((lista) => {
+    const ultimo = aNumero(lista.at(-1)?.saldoCantidadDespues);
+
+    return Math.abs(firmada(lista) - ultimo) > 0.000001;
+  });
+
+  const descuadrado = celdasDescuadradas.length > 0;
 
   return (
     <>
@@ -76,7 +103,9 @@ export function Kardex() {
             <strong>{formatearCantidad(acumulado, filas[0]?.unidad ?? "")}</strong>
             {descuadrado && (
               <span className="aviso error" role="alert">
-                El acumulado no coincide con el saldo registrado ({ultimoSaldo}).
+                El libro no cuadra en {celdasDescuadradas.length}{" "}
+                {celdasDescuadradas.length === 1 ? "celda" : "celdas"} (bodega, ubicación y lote):
+                la suma de los movimientos no coincide con el saldo que registró el servidor.
               </span>
             )}
           </p>
@@ -88,6 +117,7 @@ export function Kardex() {
                 <tr>
                   <th scope="col">Fecha</th>
                   <th scope="col">Tipo</th>
+                  <th scope="col">Lote</th>
                   <th scope="col" className="numero">Cantidad</th>
                   <th scope="col" className="numero">Costo unitario</th>
                   <th scope="col" className="numero">Saldo</th>
@@ -107,7 +137,13 @@ export function Kardex() {
                       {fila.forzadoNegativo === true && (
                         <> <span className="etiqueta">forzado</span></>
                       )}
+                      {/* Los asientos de una misma operación FEFO comparten `operacionId`: se
+                          marca para que no parezcan movimientos independientes. */}
+                      {fila.operacionId != null && (
+                        <> <span className="etiqueta">reparto</span></>
+                      )}
                     </td>
+                    <td data-prueba="lote">{nombreLote(lotes.data ?? [], fila.loteId)}</td>
                     <td className="numero">
                       {signoDeTipo(fila.tipo ?? "") < 0 ? "−" : "+"}
                       {formatearCantidad(aNumero(fila.cantidad), fila.unidad ?? "")}
@@ -133,4 +169,14 @@ export function Kardex() {
       )}
     </>
   );
+}
+
+/// Un guion y no una celda vacía: «sin lote» es un estado legítimo del producto sin
+/// trazabilidad, no un dato que falte por cargar.
+function nombreLote(lotes: RespuestaLote[], id: string | null | undefined): string {
+  if (id === null || id === undefined) {
+    return "—";
+  }
+
+  return lotes.find((l) => l.id === id)?.codigo ?? id;
 }

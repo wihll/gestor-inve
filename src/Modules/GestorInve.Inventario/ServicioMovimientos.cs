@@ -5,7 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GestorInve.Inventario;
 
-/// <summary>Datos de un movimiento simple (entrada, salida o ajuste).</summary>
+/// <summary>
+/// Datos de un movimiento simple (entrada, salida o ajuste).
+/// <paramref name="LoteId"/> es obligatorio si el producto exige lote o serial, y tiene que ser
+/// nulo si no lo exige. La excepción es una **salida sin lote** de un producto con lotes: se
+/// interpreta como «elige tú», y el servicio aplica FEFO (ADR 0009).
+/// </summary>
 public sealed record SolicitudMovimiento(
     TipoMovimiento Tipo,
     Guid VarianteId,
@@ -15,7 +20,8 @@ public sealed record SolicitudMovimiento(
     decimal? CostoUnitario,
     DateTimeOffset? Fecha,
     string? Referencia,
-    string? Observacion);
+    string? Observacion,
+    Guid? LoteId = null);
 
 public sealed record SolicitudTraslado(
     Guid VarianteId,
@@ -26,7 +32,8 @@ public sealed record SolicitudTraslado(
     decimal Cantidad,
     DateTimeOffset? Fecha,
     string? Referencia,
-    string? Observacion);
+    string? Observacion,
+    Guid? LoteId = null);
 
 public enum FalloMovimiento
 {
@@ -37,10 +44,30 @@ public enum FalloMovimiento
     SinExistencias,
     CostoRequerido,
     DatosInvalidos,
+
+    /// <summary>
+    /// Ya no se usa: la trazabilidad por lotes existe desde H7b. El valor se conserva para no
+    /// cambiar el contrato de la Api sin necesidad.
+    /// </summary>
     TrazabilidadNoSoportada,
     MovimientoInexistente,
     YaReversado,
     MismaUbicacion,
+
+    /// <summary>El producto exige lote o serial y el movimiento no lo indica.</summary>
+    LoteRequerido,
+
+    /// <summary>El producto no exige trazabilidad y el movimiento indica un lote.</summary>
+    LoteNoAplica,
+
+    /// <summary>El lote no existe, o no es de esa variante.</summary>
+    LoteInexistente,
+
+    /// <summary>La mercancía de ese lote ya venció y no puede salir como despacho normal.</summary>
+    LoteVencido,
+
+    /// <summary>Regla propia de los seriales: cantidad distinta de 1, o serial ya existente.</summary>
+    SerialInvalido,
 }
 
 public sealed record ResultadoMovimiento(FalloMovimiento Fallo, string? Mensaje, IReadOnlyList<Movimiento> Movimientos)
@@ -94,6 +121,38 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
         {
             return ResultadoMovimiento.Error(contexto.Fallo, contexto.Mensaje!);
         }
+
+        var fechaMovimiento = solicitud.Fecha ?? reloj.Ahora;
+
+        // Una salida sin lote de un producto con lotes significa «elige tú»: FEFO. Un serial no
+        // entra por aquí, porque elegir un serial automáticamente no tiene sentido: quien
+        // despacha una unidad identificada sabe cuál es.
+        if (contexto.ExigeLote && !contexto.ExigeSerial && solicitud.LoteId is null && !solicitud.Tipo.Suma())
+        {
+            var fefo = await SalidaFefoAsync(contexto, solicitud, fechaMovimiento, ct);
+
+            if (fefo.Exitoso)
+            {
+                await transaccion.CommitAsync(ct);
+            }
+
+            return fefo;
+        }
+
+        var (celda, lote) = await ResolverLoteAsync(
+            contexto, solicitud.LoteId, solicitud.Tipo, fechaMovimiento, ct);
+
+        if (celda.Fallo is not FalloMovimiento.Ninguno)
+        {
+            return ResultadoMovimiento.Error(celda.Fallo, celda.Mensaje!);
+        }
+
+        if (await ValidarSerialAsync(celda, lote, solicitud.Tipo, solicitud.Cantidad, ct) is { } falloSerial)
+        {
+            return falloSerial;
+        }
+
+        contexto = celda;
 
         var cantidad = CrearCantidad(solicitud.Cantidad, contexto.Unidad!.Value, out var errorCantidad);
 
@@ -162,6 +221,7 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             solicitud.VarianteId,
             solicitud.BodegaId,
             contexto.UbicacionId,
+            contexto.LoteId,
             cantidad,
             costoUnitario,
             saldo,
@@ -178,6 +238,117 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
         await transaccion.CommitAsync(ct);
 
         return ResultadoMovimiento.Ok(movimiento);
+    }
+
+    /// <summary>
+    /// Salida de un producto con lotes sin lote indicado: se consume por **vencimiento más
+    /// próximo primero** (FEFO), y se registra **un asiento por lote**, todos agrupados por
+    /// <c>OperacionId</c>.
+    ///
+    /// Partir el movimiento es lo único correcto: un asiento del kardex dice «salieron 30 de
+    /// este lote y quedó este saldo»; uno que dijera «salieron 30 de varios lotes» no permitiría
+    /// reconstruir el saldo de ninguno, que es justo para lo que existe la trazabilidad.
+    ///
+    /// **No fuerza negativos.** Si no hay suficiente, falla: forzar un saldo negativo requiere
+    /// decidir sobre qué lote cargarlo, y esa decisión es de quien ajusta, no del algoritmo. Para
+    /// eso la salida tiene que nombrar su lote.
+    /// </summary>
+    private async Task<ResultadoMovimiento> SalidaFefoAsync(
+        ContextoCelda contexto,
+        SolicitudMovimiento solicitud,
+        DateTimeOffset fecha,
+        CancellationToken ct)
+    {
+        var dia = DateOnly.FromDateTime(fecha.UtcDateTime);
+
+        // Se bloquean **todas** las celdas candidatas en una sola sentencia y ordenadas por `id`.
+        // Hacerlo fila a fila en orden FEFO expondría a un abrazo mortal contra una salida que
+        // nombra su lote y las bloquea en otro orden; una sola sentencia con orden fijo, no.
+        var celdas = await db.Set<Existencia>()
+            .FromSql($"""
+                select * from inventario.existencias
+                where variante_id = {contexto.VarianteId}
+                  and bodega_id = {contexto.BodegaId}
+                  and ubicacion_id = {contexto.UbicacionId}
+                  and lote_id is not null
+                  and cantidad > 0
+                order by id
+                for update
+                """)
+            .ToListAsync(ct);
+
+        var lotesPorId = await db.Set<Lote>()
+            .Where(l => l.VarianteId == contexto.VarianteId)
+            .ToDictionaryAsync(l => l.Id, ct);
+
+        // Un lote vencido no se elige nunca: si FEFO lo tomara, la salida fallaría siempre en
+        // cuanto hubiera mercancía caducada en la bodega. Los sin vencimiento van al final.
+        var candidatas = celdas
+            .Where(x => x.LoteId is { } id
+                        && lotesPorId.TryGetValue(id, out var lote)
+                        && !lote.EstaVencido(dia))
+            .OrderBy(x => lotesPorId[x.LoteId!.Value].Vencimiento ?? DateOnly.MaxValue)
+            .ThenBy(x => lotesPorId[x.LoteId!.Value].Codigo, StringComparer.Ordinal)
+            .ToList();
+
+        var disponible = candidatas.Sum(x => x.Cantidad);
+
+        if (solicitud.Cantidad > disponible)
+        {
+            return ResultadoMovimiento.Error(
+                FalloMovimiento.SinExistencias,
+                $"No hay existencias suficientes en lotes vigentes: hay {disponible} y se piden {solicitud.Cantidad}. " +
+                "Para sacar de un lote vencido, indique el lote y use un ajuste negativo.");
+        }
+
+        var operacionId = Guid.CreateVersion7();
+        var restante = solicitud.Cantidad;
+        var asientos = new List<Movimiento>();
+
+        foreach (var existencia in candidatas)
+        {
+            if (restante <= 0m)
+            {
+                break;
+            }
+
+            var tomar = Math.Min(restante, existencia.Cantidad);
+            var cantidad = CrearCantidad(tomar, contexto.Unidad!.Value, out var error);
+
+            if (error is not null)
+            {
+                return ResultadoMovimiento.Error(FalloMovimiento.DatosInvalidos, error);
+            }
+
+            var saldo = existencia.Saldo();
+            var costo = saldo.CostoDeSalida();
+            var despues = saldo.AplicarSalida(cantidad);
+
+            var asiento = Movimiento.Registrar(
+                solicitud.Tipo,
+                contexto.VarianteId,
+                contexto.BodegaId,
+                contexto.UbicacionId,
+                existencia.LoteId,
+                cantidad,
+                costo,
+                despues,
+                fecha,
+                tenant.Usuario,
+                solicitud.Referencia,
+                solicitud.Observacion,
+                operacionId: operacionId);
+
+            db.Add(asiento);
+            existencia.Aplicar(despues, reloj.Ahora);
+            asientos.Add(asiento);
+
+            restante -= tomar;
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        return ResultadoMovimiento.Ok([.. asientos]);
     }
 
     /// <summary>
@@ -220,6 +391,27 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
                 "El origen y el destino del traslado son la misma ubicación.");
         }
 
+        // Mover mercancía no cambia su lote ni su vencimiento, así que el lote es **el mismo** en
+        // los dos extremos y no se elige por FEFO: un traslado mueve un lote concreto. Tampoco
+        // se juzga el vencimiento: mover mercancía caducada dentro de la bodega (por ejemplo a
+        // una ubicación de cuarentena) es exactamente lo que hay que poder hacer con ella.
+        var (celdaOrigen, lote) = await ResolverLoteAsync(
+            origen, solicitud.LoteId, TipoMovimiento.TrasladoEntrada, solicitud.Fecha ?? reloj.Ahora, ct);
+
+        if (celdaOrigen.Fallo is not FalloMovimiento.Ninguno)
+        {
+            return ResultadoMovimiento.Error(celdaOrigen.Fallo, celdaOrigen.Mensaje!);
+        }
+
+        if (await ValidarSerialAsync(celdaOrigen, lote, TipoMovimiento.TrasladoSalida, solicitud.Cantidad, ct)
+            is { } falloSerial)
+        {
+            return falloSerial;
+        }
+
+        origen = celdaOrigen;
+        destino = destino.ConLote(celdaOrigen.LoteId);
+
         var cantidad = CrearCantidad(solicitud.Cantidad, origen.Unidad!.Value, out var errorCantidad);
 
         if (errorCantidad is not null)
@@ -260,6 +452,7 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             solicitud.VarianteId,
             solicitud.BodegaOrigenId,
             origen.UbicacionId,
+            origen.LoteId,
             cantidad,
             costo,
             saldoOrigenDespues,
@@ -274,6 +467,7 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             solicitud.VarianteId,
             solicitud.BodegaDestinoId,
             destino.UbicacionId,
+            destino.LoteId,
             cantidad,
             costo,
             saldoDestinoDespues,
@@ -326,6 +520,12 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             return ResultadoMovimiento.Error(contexto.Fallo, contexto.Mensaje!);
         }
 
+        // La reversa toma el lote **del asiento original**, sin volver a pasar por las reglas de
+        // trazabilidad: deshacer un movimiento que ya está en el libro no puede quedar bloqueado
+        // porque entretanto el lote venciera o el producto dejara de exigir lote. Si el libro
+        // registró esa salida de ese lote, la corrección tiene que poder entrar por ahí.
+        contexto = contexto.ConLote(original.LoteId);
+
         var existencia = await BloquearExistenciaAsync(contexto, ct);
         var saldo = existencia.Saldo();
         var cantidad = original.ComoCantidad();
@@ -360,6 +560,7 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             original.VarianteId,
             original.BodegaId,
             original.UbicacionId,
+            original.LoteId,
             cantidad,
             costo,
             saldo,
@@ -386,7 +587,15 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
         Guid VarianteId,
         Guid BodegaId,
         Guid UbicacionId,
-        Unidad? Unidad);
+        Unidad? Unidad,
+        bool ExigeLote = false,
+        bool ExigeSerial = false,
+        Guid? LoteId = null)
+    {
+        public bool ExigeTrazabilidad => ExigeLote || ExigeSerial;
+
+        public ContextoCelda ConLote(Guid? loteId) => this with { LoteId = loteId };
+    }
 
     private static Cantidad CrearCantidad(decimal valor, Unidad unidad, out string? error)
     {
@@ -427,19 +636,6 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             return new ContextoCelda(FalloMovimiento.VarianteInexistente, "El producto de la variante no existe.", varianteId, bodegaId, Guid.Empty, null);
         }
 
-        // El producto declara que exige trazabilidad y todavía no existe (H7b): se rechaza en
-        // lugar de aceptar el movimiento perdiendo la trazabilidad que el producto pide.
-        if (producto.ExigeLote || producto.ExigeSerial)
-        {
-            return new ContextoCelda(
-                FalloMovimiento.TrazabilidadNoSoportada,
-                "El producto exige lote o serial, y la trazabilidad por lotes aún no está implementada.",
-                varianteId,
-                bodegaId,
-                Guid.Empty,
-                null);
-        }
-
         var unidadMedida = await db.Set<UnidadMedida>()
             .SingleOrDefaultAsync(u => u.Id == producto.UnidadMedidaId, ct);
 
@@ -472,7 +668,113 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             varianteId,
             bodegaId,
             ubicacion.Id,
-            unidadMedida.ComoUnidad());
+            unidadMedida.ComoUnidad(),
+            producto.ExigeLote,
+            producto.ExigeSerial);
+    }
+
+    /// <summary>
+    /// Aplica las reglas de trazabilidad del ADR 0009 y devuelve la celda con su lote resuelto.
+    /// Devuelve <c>null</c> en <paramref name="lote"/> cuando el producto no exige trazabilidad.
+    ///
+    /// La fecha con la que se juzga el vencimiento es la **del movimiento**, no la de hoy: un
+    /// asiento con fecha de negocio anterior tiene que juzgarse con la fecha que le corresponde,
+    /// o registrar ayer sería imposible en cuanto el lote venciera hoy.
+    /// </summary>
+    private async Task<(ContextoCelda Celda, Lote? Lote)> ResolverLoteAsync(
+        ContextoCelda celda,
+        Guid? loteId,
+        TipoMovimiento tipo,
+        DateTimeOffset fecha,
+        CancellationToken ct)
+    {
+        if (!celda.ExigeTrazabilidad)
+        {
+            // No se acepta una dimensión que el producto no declara: crearía existencias que
+            // ninguna pantalla sabría mostrar y que el saldo sin lote no contaría.
+            return loteId is null
+                ? (celda.ConLote(null), null)
+                : (celda with
+                {
+                    Fallo = FalloMovimiento.LoteNoAplica,
+                    Mensaje = "El producto no exige lote ni serial: el movimiento no debe indicar lote.",
+                }, null);
+        }
+
+        if (loteId is not { } pedido)
+        {
+            return (celda with
+            {
+                Fallo = FalloMovimiento.LoteRequerido,
+                Mensaje = "El producto exige lote o serial y el movimiento no lo indica.",
+            }, null);
+        }
+
+        var lote = await db.Set<Lote>().SingleOrDefaultAsync(l => l.Id == pedido, ct);
+
+        if (lote is null || lote.VarianteId != celda.VarianteId)
+        {
+            // El mismo mensaje para «no existe» y «es de otra variante»: distinguirlos le diría
+            // a quien prueba identificadores ajenos que ese lote existe en otra empresa.
+            return (celda with
+            {
+                Fallo = FalloMovimiento.LoteInexistente,
+                Mensaje = "El lote no existe para esa variante.",
+            }, null);
+        }
+
+        // Un lote vencido **no sale** como despacho. La baja existe y es explícita: un
+        // AjusteNegativo, que exige el permiso de ajuste y queda en el libro como lo que es.
+        if (!tipo.Suma() && !tipo.EsAjuste() && lote.EstaVencido(DateOnly.FromDateTime(fecha.UtcDateTime)))
+        {
+            return (celda with
+            {
+                Fallo = FalloMovimiento.LoteVencido,
+                Mensaje =
+                    $"El lote {lote.Codigo} venció el {lote.Vencimiento:yyyy-MM-dd}: " +
+                    "para darlo de baja use un ajuste negativo.",
+            }, null);
+        }
+
+        return (celda.ConLote(lote.Id), lote);
+    }
+
+    /// <summary>
+    /// Reglas propias de un serial: cada unidad es única, así que la cantidad solo puede ser 1 y
+    /// un serial no puede estar en dos sitios a la vez. Si pudiera, dejaría de identificar nada.
+    /// </summary>
+    private async Task<ResultadoMovimiento?> ValidarSerialAsync(
+        ContextoCelda celda,
+        Lote? lote,
+        TipoMovimiento tipo,
+        decimal cantidad,
+        CancellationToken ct)
+    {
+        if (lote is null || !celda.ExigeSerial)
+        {
+            return null;
+        }
+
+        if (cantidad != 1m)
+        {
+            return ResultadoMovimiento.Error(
+                FalloMovimiento.SerialInvalido,
+                $"El producto se identifica por serial: la cantidad debe ser 1 y se pidieron {cantidad}.");
+        }
+
+        if (!tipo.Suma())
+        {
+            return null;
+        }
+
+        var yaTieneExistencia = await db.Set<Existencia>()
+            .AnyAsync(x => x.LoteId == lote.Id && x.Cantidad > 0m, ct);
+
+        return yaTieneExistencia
+            ? ResultadoMovimiento.Error(
+                FalloMovimiento.SerialInvalido,
+                $"El serial {lote.Codigo} ya tiene existencia: un serial no puede estar en dos sitios.")
+            : null;
     }
 
     /// <summary>
@@ -481,12 +783,16 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
     /// </summary>
     private async Task<Existencia> BloquearExistenciaAsync(ContextoCelda celda, CancellationToken ct)
     {
+        // `is not distinct from` y no `=`: con un lote nulo, `lote_id = null` nunca es cierto y
+        // la consulta no encontraría la fila que sí existe, de modo que cada movimiento crearía
+        // una existencia nueva. Es la contraparte del `nulls not distinct` del índice.
         var existente = await db.Set<Existencia>()
             .FromSql($"""
                 select * from inventario.existencias
                 where variante_id = {celda.VarianteId}
                   and bodega_id = {celda.BodegaId}
                   and ubicacion_id = {celda.UbicacionId}
+                  and lote_id is not distinct from {celda.LoteId}
                 for update
                 """)
             .FirstOrDefaultAsync(ct);
@@ -500,6 +806,7 @@ public sealed class ServicioMovimientos(GestorInveDbContext db, IReloj reloj, IC
             celda.VarianteId,
             celda.BodegaId,
             celda.UbicacionId,
+            celda.LoteId,
             celda.Unidad!.Value,
             MonedaBase);
 

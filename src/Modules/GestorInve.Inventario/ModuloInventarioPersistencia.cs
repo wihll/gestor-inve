@@ -58,6 +58,28 @@ public sealed class ModuloInventarioPersistencia : IModuloPersistencia
             e.HasIndex(x => new { x.BodegaId, x.Codigo }).IsUnique();
         });
 
+        modelo.Entity<Lote>(e =>
+        {
+            e.ToTable("lotes", Esquema);
+            e.HasKey(x => x.Id);
+            e.Property(x => x.EmpresaId).IsRequired();
+            e.Property(x => x.VarianteId).IsRequired();
+            e.Property(x => x.Codigo).HasMaxLength(60).IsRequired();
+            e.Property(x => x.Vencimiento);
+            e.Property(x => x.EsSerial).IsRequired();
+            e.Property(x => x.CreadoPor).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ActualizadoPor).HasMaxLength(100);
+
+            // Único **por variante**: dos artículos distintos pueden usar el mismo número de
+            // lote del proveedor, y no son el mismo lote.
+            e.HasIndex(x => new { x.VarianteId, x.Codigo }).IsUnique();
+
+            // FEFO ordena por vencimiento dentro de la variante.
+            e.HasIndex(x => new { x.EmpresaId, x.VarianteId, x.Vencimiento });
+
+            e.HasOne<Variante>().WithMany().HasForeignKey(x => x.VarianteId).OnDelete(DeleteBehavior.Restrict);
+        });
+
         modelo.Entity<Movimiento>(e =>
         {
             e.ToTable("movimientos", Esquema);
@@ -87,6 +109,10 @@ public sealed class ModuloInventarioPersistencia : IModuloPersistencia
             // El kardex se consulta por celda y en orden cronológico.
             e.HasIndex(x => new { x.EmpresaId, x.VarianteId, x.BodegaId, x.UbicacionId, x.Fecha });
             e.HasIndex(x => x.TrasladoId);
+            e.HasIndex(x => x.OperacionId);
+            e.HasIndex(x => x.LoteId);
+
+            e.HasOne<Lote>().WithMany().HasForeignKey(x => x.LoteId).OnDelete(DeleteBehavior.Restrict);
 
             // **Único**: un movimiento se reversa a lo sumo una vez. Es la garantía que permite
             // no mutar el original y mantener el libro inmutable.
@@ -113,12 +139,20 @@ public sealed class ModuloInventarioPersistencia : IModuloPersistencia
             e.Property(x => x.Moneda).HasMaxLength(3).IsRequired();
             e.Property(x => x.ActualizadoEn).IsRequired();
 
-            // Una sola fila por celda: es lo que se bloquea con FOR UPDATE.
-            e.HasIndex(x => new { x.VarianteId, x.BodegaId, x.UbicacionId }).IsUnique();
+            // Una sola fila por celda: es lo que se bloquea con FOR UPDATE. La celda incluye el
+            // lote, y el lote es nulable, así que el índice necesita `nulls not distinct`: por
+            // omisión PostgreSQL considera **distintos** dos NULL y dejaría crear dos filas para
+            // la misma celda sin lote. Con dos filas, dos transacciones bloquearían filas
+            // diferentes y el libro dejaría de cuadrar. Esa cláusula se aplica en la migración,
+            // porque EF Core no la modela (ver ADR 0009).
+            e.HasIndex(x => new { x.VarianteId, x.BodegaId, x.UbicacionId, x.LoteId })
+                .IsUnique()
+                .HasDatabaseName("ix_existencias_celda");
 
             e.HasOne<Variante>().WithMany().HasForeignKey(x => x.VarianteId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Bodega>().WithMany().HasForeignKey(x => x.BodegaId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Ubicacion>().WithMany().HasForeignKey(x => x.UbicacionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Lote>().WithMany().HasForeignKey(x => x.LoteId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -33,6 +33,37 @@ async function seleccionarPorTexto(ambito: Locator, etiqueta: string, contiene: 
   await select.selectOption(await opcion.getAttribute("value"));
 }
 
+/// Fecha en `yyyy-MM-dd`, que es lo que acepta un `input[type=date]`.
+function enDias(dias: number): string {
+  const fecha = new Date();
+  fecha.setUTCDate(fecha.getUTCDate() + dias);
+
+  return fecha.toISOString().slice(0, 10);
+}
+
+async function crearLote(formulario: Locator, sku: string, codigo: string, vencimiento: string) {
+  await seleccionarPorTexto(formulario, "Variante del lote", sku);
+  await formulario.getByLabel(/Código del lote/).fill(codigo);
+  await formulario.getByLabel(/Vencimiento/).fill(vencimiento);
+  await formulario.getByRole("button", { name: "Crear lote" }).click();
+}
+
+async function registrarEntrada(
+  formulario: Locator,
+  sku: string,
+  lote: string,
+  cantidad: string,
+  costo: string,
+) {
+  await formulario.getByLabel("Tipo").selectOption("Entrada");
+  await seleccionarPorTexto(formulario, "Variante", sku);
+  await seleccionarPorTexto(formulario, "Bodega", "PRI");
+  await seleccionarPorTexto(formulario, "Lote", lote);
+  await formulario.getByLabel("Cantidad").fill(cantidad);
+  await formulario.getByLabel("Costo unitario").fill(costo);
+  await formulario.getByRole("button", { name: "Registrar" }).click();
+}
+
 /// Datos únicos por ejecución: la base es compartida y el NIT es único por empresa.
 function datosNuevos() {
   const sufijo = Math.random().toString(36).slice(2, 10);
@@ -156,6 +187,90 @@ test("una contraseña equivocada muestra el mensaje del servidor y no entra", as
 
   await expect(page.getByRole("alert")).toContainText("Credenciales inválidas");
   await expect(page).toHaveURL(/\/entrar/);
+});
+
+test("un producto con lotes se despacha por vencimiento más próximo", async ({ page }) => {
+  await registrarYEntrar(page);
+
+  // --- Catálogo: un producto que exige lote
+  await irA(page, "Catálogo");
+
+  const nuevaUnidad = tarjeta(page, "Nueva unidad de medida");
+  const nuevoProducto = tarjeta(page, "Nuevo producto");
+
+  await nuevaUnidad.getByRole("button", { name: "Crear unidad" }).click();
+  await expect(nuevoProducto.getByRole("option", { name: /UND/ })).toBeAttached();
+
+  const sku = `MEDI-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
+  await nuevoProducto.getByLabel("SKU").fill(sku);
+  await nuevoProducto.getByLabel("Nombre").fill("Jarabe con vencimiento");
+  await seleccionarPorTexto(nuevoProducto, "Unidad de medida", "UND");
+  await nuevoProducto.getByLabel(/Exige lote/).check();
+  await nuevoProducto.getByRole("button", { name: "Crear producto" }).click();
+
+  await expect(tarjeta(page, "Productos").getByRole("row").filter({ hasText: sku })).toBeVisible();
+
+  // --- Inventario: bodega y dos lotes con vencimientos distintos
+  await irA(page, "Inventario");
+
+  const nuevaBodega = tarjeta(page, "Nueva bodega");
+  await nuevaBodega.getByLabel("Código").fill("PRI");
+  await nuevaBodega.getByLabel("Nombre").fill("Principal");
+  await nuevaBodega.getByRole("button", { name: "Crear bodega" }).click();
+
+  const movimiento = tarjeta(page, "Registrar movimiento");
+  await expect(movimiento.getByRole("option", { name: /PRI/ })).toBeAttached();
+
+  const nuevoLote = tarjeta(page, "Nuevo lote o serial");
+
+  // El lejano primero: si el orden dependiera de cuándo se creó el lote y no del vencimiento,
+  // esta prueba lo notaría.
+  await crearLote(nuevoLote, sku, "AAA-LEJANO", enDias(90));
+  await crearLote(nuevoLote, sku, "ZZZ-PROXIMO", enDias(5));
+
+  // --- Entradas: cada lote con su costo
+  await registrarEntrada(movimiento, sku, "AAA-LEJANO", "10", "1000");
+  await registrarEntrada(movimiento, sku, "ZZZ-PROXIMO", "10", "2000");
+
+  const existencias = tarjeta(page, "Existencias");
+  await expect(existencias.getByRole("row").filter({ hasText: "ZZZ-PROXIMO" })).toBeVisible();
+
+  // --- Salida sin elegir lote: el servidor reparte por vencimiento
+  await movimiento.getByLabel("Tipo").selectOption("Salida");
+  await seleccionarPorTexto(movimiento, "Variante", sku);
+  await seleccionarPorTexto(movimiento, "Bodega", "PRI");
+  await movimiento.getByLabel("Lote").selectOption("");
+  await movimiento.getByLabel("Cantidad").fill("12");
+  await movimiento.getByRole("button", { name: "Registrar" }).click();
+
+  // La pantalla dice que la operación tocó dos lotes: si lo escondiera, quien despacha no
+  // sabría de dónde salió la mercancía que acaba de entregar.
+  await expect(page.getByRole("alert")).toContainText("2 lotes");
+
+  // El lote próximo queda en cero y el lejano en 8: FEFO, no «el primero que aparezca».
+  const filaProximo = existencias.getByRole("row").filter({ hasText: "ZZZ-PROXIMO" });
+  const filaLejano = existencias.getByRole("row").filter({ hasText: "AAA-LEJANO" });
+
+  await expect(filaProximo.locator('[data-prueba="cantidad"]')).toHaveText("0 UND");
+  await expect(filaLejano.locator('[data-prueba="cantidad"]')).toHaveText("8 UND");
+
+  // --- Una entrada más, **sobre el lote que quedó en cero**
+  //
+  // No es decorativa: deja el último asiento del libro en una celda cuyo saldo (3) no coincide
+  // con el total de la variante (11). Sin ella, total y último saldo valían 8 por casualidad y
+  // la pantalla habría dado el mismo resultado comparando el total —que es lo incorrecto— que
+  // comparando celda por celda. Se comprobó: con la comparación vieja, la prueba pasaba igual.
+  await registrarEntrada(movimiento, sku, "ZZZ-PROXIMO", "3", "2500");
+
+  await expect(filaProximo.locator('[data-prueba="cantidad"]')).toHaveText("3 UND");
+
+  // --- El kardex de cada lote cuadra por separado
+  await irA(page, "Kardex");
+  await seleccionarPorTexto(page.locator("main"), "Variante", sku);
+
+  // Tres asientos de ese lote: su entrada, su salida en el reparto FEFO y la entrada final.
+  await expect(page.getByRole("row").filter({ hasText: "ZZZ-PROXIMO" })).toHaveCount(3);
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });
 
 /// Esta prueba **no existía** y por eso el defecto llegó hasta el job de despliegue de H4: las
