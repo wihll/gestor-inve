@@ -38,6 +38,17 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Mismas opciones de JSON que usa la Api: los enum viajan como texto. Si las pruebas
+    /// deserializaran con las opciones por omisión, estarían comprobando un contrato distinto
+    /// del que ven los clientes reales.
+    /// </summary>
+    public static System.Text.Json.JsonSerializerOptions Json { get; } = new(
+        System.Text.Json.JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter() },
+    };
+
     /// <summary>NIT único por prueba: el directorio de empresas lo exige único y las pruebas comparten base.</summary>
     public static string NitNuevo() => $"NIT{Guid.NewGuid():N}"[..15];
 

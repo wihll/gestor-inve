@@ -1,0 +1,259 @@
+/* Tokens. El tema claro y el oscuro se definen con las mismas variables para que ningún
+   componente tenga que saber en qué tema está. */
+:root {
+  --fondo: #f7f8fa;
+  --superficie: #ffffff;
+  --borde: #d9dde5;
+  --texto: #15181d;
+  --texto-suave: #5b6472;
+  --acento: #1d4ed8;
+  --acento-texto: #ffffff;
+  --error: #b42318;
+  --error-fondo: #fef3f2;
+  --exito: #067647;
+  --exito-fondo: #ecfdf3;
+  --aviso: #b54708;
+  --radio: 8px;
+  --sombra: 0 1px 2px rgb(16 24 40 / 6%), 0 1px 3px rgb(16 24 40 / 10%);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fondo: #14171c;
+    --superficie: #1c2027;
+    --borde: #2f3540;
+    --texto: #f0f2f5;
+    --texto-suave: #a0a8b4;
+    --acento: #6d93ff;
+    --acento-texto: #0b1020;
+    --error: #ff9c92;
+    --error-fondo: #3a1a17;
+    --exito: #6ee7a8;
+    --exito-fondo: #10291d;
+    --aviso: #ffc266;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Foco siempre visible: una bodega se opera con teclado y lectores de pantalla. */
+:focus-visible {
+  outline: 3px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.salto-al-contenido {
+  position: absolute;
+  left: -9999px;
+}
+
+.salto-al-contenido:focus {
+  left: 8px;
+  top: 8px;
+  z-index: 10;
+  padding: 8px 12px;
+  background: var(--superficie);
+  border-radius: var(--radio);
+}
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+}
+
+.cabecera h1 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.cabecera nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.cabecera nav a {
+  padding: 8px 12px;
+  border-radius: var(--radio);
+  color: var(--texto);
+  text-decoration: none;
+}
+
+.cabecera nav a[aria-current="page"] {
+  background: var(--acento);
+  color: var(--acento-texto);
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  /* 16px de aire a los lados: en móvil el contenido no debe pegarse al borde. */
+  padding: 16px;
+}
+
+.tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.campo {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.campo span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+  color: var(--texto-suave);
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  /* 16px evita que iOS haga zoom al enfocar un campo. */
+  font-size: 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto);
+}
+
+button {
+  font: inherit;
+  /* 44px de alto mínimo: es lo que se puede tocar con el dedo sin fallar. */
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1px solid var(--acento);
+  border-radius: var(--radio);
+  background: var(--acento);
+  color: var(--acento-texto);
+  cursor: pointer;
+}
+
+button.secundario {
+  background: transparent;
+  color: var(--texto);
+  border-color: var(--borde);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.aviso {
+  padding: 12px;
+  border-radius: var(--radio);
+  margin-bottom: 12px;
+}
+
+.aviso.error {
+  background: var(--error-fondo);
+  color: var(--error);
+  border: 1px solid currentcolor;
+}
+
+.aviso.exito {
+  background: var(--exito-fondo);
+  color: var(--exito);
+  border: 1px solid currentcolor;
+}
+
+.tabla-contenedor {
+  /* En móvil la tabla se desplaza dentro de su caja, no arrastra la página entera. */
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+th,
+td {
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+
+th {
+  color: var(--texto-suave);
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Los números se leen alineados a la derecha y con cifras de ancho fijo. */
+td.numero,
+th.numero {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+td.negativo {
+  color: var(--error);
+  font-weight: 600;
+}
+
+.fila-forzada td {
+  background: var(--error-fondo);
+}
+
+.etiqueta {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  border: 1px solid var(--borde);
+  color: var(--texto-suave);
+}
+
+.rejilla {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 720px) {
+  .rejilla.dos {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.vacio {
+  padding: 24px;
+  text-align: center;
+  color: var(--texto-suave);
+}
+
+.pie {
+  padding: 16px;
+  text-align: center;
+  color: var(--texto-suave);
+  font-size: 0.875rem;
+}

@@ -39,6 +39,12 @@ public sealed record RespuestaVariante(
     bool Activa,
     IReadOnlyList<string> Codigos);
 
+/// <summary>Código de barras recién añadido.</summary>
+public sealed record RespuestaCodigo(string Codigo);
+
+/// <summary>Variante a la que corresponde un código escaneado.</summary>
+public sealed record RespuestaVarianteDeCodigo(Guid VarianteId);
+
 public sealed record RespuestaProducto(
     Guid Id,
     string Sku,
@@ -83,6 +89,7 @@ public static class EndpointsCatalogo
                 .Select(u => new RespuestaUnidad(u.Id, u.Codigo, u.Nombre, u.Decimales, u.Activa))
                 .ToListAsync(ct)))
             .RequireAuthorization(Permiso.CatalogoLeer)
+            .Produces<List<RespuestaUnidad>>(StatusCodes.Status200OK)
             .WithSummary("Unidades de medida de la empresa.");
 
         grupo.MapPost("/unidades", async (
@@ -101,6 +108,8 @@ public static class EndpointsCatalogo
                 ct);
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
+            .Produces<RespuestaUnidad>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Crea una unidad de medida.");
     }
 
@@ -112,6 +121,7 @@ public static class EndpointsCatalogo
                 .Select(c => new RespuestaCategoria(c.Id, c.Nombre, c.PadreId, c.Activa))
                 .ToListAsync(ct)))
             .RequireAuthorization(Permiso.CatalogoLeer)
+            .Produces<List<RespuestaCategoria>>(StatusCodes.Status200OK)
             .WithSummary("Categorías de la empresa.");
 
         grupo.MapPost("/categorias", async (
@@ -142,6 +152,8 @@ public static class EndpointsCatalogo
                 new RespuestaCategoria(categoria.Id, categoria.Nombre, categoria.PadreId, categoria.Activa));
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
+            .Produces<RespuestaCategoria>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Crea una categoría, opcionalmente bajo otra.");
 
         grupo.MapPut("/categorias/{id:guid}/padre", async (
@@ -185,6 +197,8 @@ public static class EndpointsCatalogo
             }
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Recoloca una categoría en el árbol, rechazando ciclos.");
     }
 
@@ -195,6 +209,7 @@ public static class EndpointsCatalogo
                 .Select(Proyectar)
                 .ToList()))
             .RequireAuthorization(Permiso.CatalogoLeer)
+            .Produces<List<RespuestaProducto>>(StatusCodes.Status200OK)
             .WithSummary("Productos de la empresa con sus variantes.");
 
         grupo.MapGet("/productos/{id:guid}", async (Guid id, GestorInveDbContext db, CancellationToken ct) =>
@@ -204,6 +219,8 @@ public static class EndpointsCatalogo
             return producto is null ? Results.NotFound() : Results.Ok(Proyectar(producto));
         })
             .RequireAuthorization(Permiso.CatalogoLeer)
+            .Produces<RespuestaProducto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Un producto por identificador.");
 
         grupo.MapPost("/productos", async (
@@ -244,6 +261,9 @@ public static class EndpointsCatalogo
                 ct);
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
+            .Produces<RespuestaProducto>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Crea un producto; sin atributos declarados nace con su variante única.");
 
         grupo.MapPost("/productos/{id:guid}/variantes", async (
@@ -285,6 +305,9 @@ public static class EndpointsCatalogo
             }
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
+            .Produces<RespuestaVariante>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Añade una variante con sus valores de atributo.");
 
         grupo.MapPost("/variantes/{id:guid}/codigos", async (
@@ -311,7 +334,9 @@ public static class EndpointsCatalogo
 
                 return await GuardarAsync(
                     db,
-                    () => Results.Created($"/catalogo/variantes/{id}/codigos/{codigo.Id}", new { codigo.Codigo }),
+                    () => Results.Created(
+                        $"/catalogo/variantes/{id}/codigos/{codigo.Id}",
+                        new RespuestaCodigo(codigo.Codigo)),
                     ct);
             }
             catch (InvalidOperationException error)
@@ -320,6 +345,8 @@ public static class EndpointsCatalogo
             }
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
+            .Produces<RespuestaCodigo>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Añade un código de barras a una variante.");
 
         grupo.MapPut("/variantes/{id:guid}/limites", async (
@@ -348,6 +375,8 @@ public static class EndpointsCatalogo
             }
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
+            .Produces(StatusCodes.Status204NoContent)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .WithSummary("Fija las existencias mínimas y máximas de una variante.");
 
         grupo.MapGet("/codigos/{codigo}", async (string codigo, GestorInveDbContext db, CancellationToken ct) =>
@@ -361,9 +390,11 @@ public static class EndpointsCatalogo
 
             return encontrado == Guid.Empty
                 ? Results.NotFound()
-                : Results.Ok(new { varianteId = encontrado });
+                : Results.Ok(new RespuestaVarianteDeCodigo(encontrado));
         })
             .RequireAuthorization(Permiso.CatalogoLeer)
+            .Produces<RespuestaVarianteDeCodigo>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
             .WithSummary("Resuelve un código escaneado a su variante.");
     }
 
