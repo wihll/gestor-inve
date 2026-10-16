@@ -12,6 +12,17 @@ public class ArquitecturaTests
         "Terceros", "Contabilidad", "FacturaElectronica", "Seguridad",
     ];
 
+    /// <summary>
+    /// Dependencias **declaradas** entre módulos. Un ERP real las necesita (el inventario no
+    /// puede validar una variante sin conocer el catálogo), pero cada una debe ser una decisión
+    /// visible: una dependencia que no esté aquí rompe la compilación de las pruebas.
+    /// Ver ADR 0006.
+    /// </summary>
+    private static readonly Dictionary<string, string[]> DependenciasPermitidas = new(StringComparer.Ordinal)
+    {
+        ["Inventario"] = ["Catalogo"],
+    };
+
     private static readonly Assembly Core = typeof(Dinero).Assembly;
 
     private static Assembly Modulo(string nombre) => Assembly.Load($"GestorInve.{nombre}");
@@ -28,11 +39,14 @@ public class ArquitecturaTests
 
     [Theory]
     [MemberData(nameof(ModulosData))]
-    public void Un_modulo_no_depende_de_otros_modulos_ni_de_la_api(string modulo)
+    public void Un_modulo_solo_depende_de_los_modulos_que_declara(string modulo)
     {
+        var permitidos = DependenciasPermitidas.TryGetValue(modulo, out var declarados) ? declarados : [];
+
         string[] prohibidos =
         [
-            .. Modulos.Where(m => m != modulo).Select(m => $"GestorInve.{m}"),
+            .. Modulos.Where(m => m != modulo && !permitidos.Contains(m, StringComparer.Ordinal))
+                .Select(m => $"GestorInve.{m}"),
             "GestorInve.Api",
             "GestorInve.Worker",
         ];
@@ -40,6 +54,55 @@ public class ArquitecturaTests
         var resultado = Types.InAssembly(Modulo(modulo)).ShouldNot().HaveDependencyOnAny(prohibidos).GetResult();
 
         Assert.True(resultado.IsSuccessful, Fallos(resultado));
+    }
+
+    /// <summary>
+    /// El grafo de dependencias declaradas no puede tener ciclos. Dos módulos que se necesitan
+    /// mutuamente no se pueden razonar, probar ni desplegar por separado: dejan de ser módulos.
+    /// </summary>
+    [Fact]
+    public void Las_dependencias_declaradas_no_forman_ciclos()
+    {
+        foreach (var (modulo, _) in DependenciasPermitidas)
+        {
+            var visitados = new HashSet<string>(StringComparer.Ordinal);
+            var pila = new Stack<string>([modulo]);
+
+            while (pila.Count > 0)
+            {
+                var actual = pila.Pop();
+
+                if (!DependenciasPermitidas.TryGetValue(actual, out var siguientes))
+                {
+                    continue;
+                }
+
+                foreach (var siguiente in siguientes)
+                {
+                    Assert.NotEqual(modulo, siguiente);
+
+                    if (visitados.Add(siguiente))
+                    {
+                        pila.Push(siguiente);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>Cada dependencia declarada tiene que nombrar módulos que existen.</summary>
+    [Fact]
+    public void Las_dependencias_declaradas_nombran_modulos_reales()
+    {
+        foreach (var (modulo, dependencias) in DependenciasPermitidas)
+        {
+            Assert.Contains(modulo, Modulos);
+
+            foreach (var dependencia in dependencias)
+            {
+                Assert.Contains(dependencia, Modulos);
+            }
+        }
     }
 
     /// <summary>

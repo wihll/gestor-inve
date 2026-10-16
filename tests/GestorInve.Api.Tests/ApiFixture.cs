@@ -18,7 +18,8 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string ClaveFirma = "clave-de-pruebas-con-mas-de-32-bytes-para-hmac-sha256";
 
-    private static readonly string Cadena =
+    /// <summary>Expuesta para las pruebas que necesitan comprobar algo por SQL crudo.</summary>
+    public static string CadenaConexion { get; } =
         Environment.GetEnvironmentVariable("GESTORINVE_CONEXION_TEST")
         ?? "Host=127.0.0.1;Port=5432;Database=gestorinve;Username=gestorinve;Password=gestorinve";
 
@@ -46,12 +47,15 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     /// basta con estar autenticado. Se firma aquí porque no hay endpoint que emita tokens
     /// degradados: crearlo solo para las pruebas sería una puerta que no debe existir.
     /// </summary>
-    public static string TokenSinPermisos(string tokenAcceso)
+    public static string TokenSinPermisos(string tokenAcceso, params string[] permisosAQuitar)
     {
         var original = new JwtSecurityTokenHandler().ReadJwtToken(tokenAcceso);
 
+        // Sin argumentos se quitan todos los permisos; con argumentos, solo los indicados,
+        // para poder probar que falta **ese** permiso y no simplemente que falta autenticación.
         var claims = original.Claims
-            .Where(c => c.Type != Api.Autenticacion.ClaimsGestorInve.Permiso)
+            .Where(c => c.Type != Api.Autenticacion.ClaimsGestorInve.Permiso
+                        || (permisosAQuitar.Length > 0 && !permisosAQuitar.Contains(c.Value, StringComparer.Ordinal)))
             .ToList();
 
         var clave = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(ClaveFirma));
@@ -71,7 +75,7 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        builder.UseSetting("ConnectionStrings:GestorInve", Cadena);
+        builder.UseSetting("ConnectionStrings:GestorInve", CadenaConexion);
         builder.UseSetting($"{Api.Autenticacion.OpcionesJwt.Seccion}:Clave", ClaveFirma);
     }
 }

@@ -4,6 +4,7 @@
     <ProjectReference Include="..\GestorInve.Persistencia\GestorInve.Persistencia.csproj" />
     <ProjectReference Include="..\Modules\GestorInve.Seguridad\GestorInve.Seguridad.csproj" />
     <ProjectReference Include="..\Modules\GestorInve.Catalogo\GestorInve.Catalogo.csproj" />
+    <ProjectReference Include="..\Modules\GestorInve.Inventario\GestorInve.Inventario.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
