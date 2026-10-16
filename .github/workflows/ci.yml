@@ -317,10 +317,10 @@ jobs:
           comprobar "nginx no resuelve las rutas del SPA" 200 GET /inventario
           # 401 y no 404: la petición llegó a la Api a través del proxy y la rechazó por falta
           # de credenciales, que es la respuesta correcta.
-          comprobar "El proxy no llega a la Api" 401 GET /auth/yo
+          comprobar "El proxy no llega a la Api" 401 GET /api/auth/yo
           # El alta de empresa es el único flujo que escribe sin sesión previa: si responde,
           # la cadena nginx → Api → PostgreSQL con RLS funciona de punta a punta.
-          comprobar "El alta de empresa falló" 201 POST /empresas \
+          comprobar "El alta de empresa falló" 201 POST /api/empresas \
             '{"nit":"DOCKER9000001","razonSocial":"Prueba Compose","correoAdmin":"admin@prueba.test","nombreAdmin":"Administrador","contrasena":"Contrasena-De-Prueba-1"}'
 
           if [ "$fallos" -ne 0 ]; then

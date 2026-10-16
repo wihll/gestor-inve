@@ -45,6 +45,11 @@ Se comprobó en los dos sentidos: devuelve 1 sin nadie escuchando y 0 contra una
 ### El compose se ejecuta en el CI
 Un `docker-compose.yml` que nadie arranca es código no ejecutado, y la documentación de instalación envejece peor que el código. El job `compose` lo construye, lo levanta con `--wait`, y comprueba: que el rol no tenga privilegios, que el esquema quedara aplicado (al menos 16 tablas), que la web devuelva el SPA también en una ruta del enrutador del cliente, que `/auth/yo` responda **401 y no 404** (prueba de que la petición atravesó el proxy y llegó a la Api), que un alta de empresa devuelva 201 —la cadena nginx → Api → PostgreSQL con RLS completa— y que el contenedor de la Api se declare sano.
 
+### CodeQL solo corre si hay dónde subirlo
+El análisis se publica en «code scanning», que en un repositorio **privado** solo existe con GitHub Advanced Security. Sin ella, la acción falla al subir el resultado y el workflow queda en rojo por una política de la cuenta y no por un hallazgo: un rojo que nadie puede arreglar deja de significar nada y se acaba ignorando, que es peor que no tenerlo.
+
+Así que el workflow pregunta primero. Si no está disponible, el análisis **no se ejecuta** y queda un aviso que lo dice en esas palabras. Nunca un verde que insinúe que se analizó algo. Se habilita haciendo público el repositorio —code scanning es gratis en los públicos, y este proyecto es AGPL, así que acabará siéndolo— o activando Advanced Security en los ajustes.
+
 ## Pendientes
 - **No verificado en este entorno:** no hay demonio de Docker en el contenedor de desarrollo, así que las imágenes y el compose solo se ejercitan en el runner. Lo que el CI no comprueba (por ejemplo, el comportamiento tras reiniciar la máquina anfitriona) sigue sin verificar.
 - Copias de seguridad: el volumen `datos-db` persiste, pero no hay trabajo programado de respaldo. Va en H10 con el runbook.
