@@ -106,6 +106,7 @@ public static class EndpointsInventario
             return Results.Ok(bodegas.Select(Proyectar).ToList());
         })
             .RequireAuthorization(Permiso.InventarioLeer)
+            .Produces<List<RespuestaBodega>>(StatusCodes.Status200OK)
             .WithSummary("Bodegas con sus ubicaciones.");
 
         grupo.MapPost("/bodegas", async (
@@ -119,6 +120,8 @@ public static class EndpointsInventario
             return await GuardarAsync(db, () => Results.Created($"/inventario/bodegas/{bodega.Id}", Proyectar(bodega)), ct);
         })
             .RequireAuthorization(Permiso.InventarioAjustar)
+            .Produces<RespuestaBodega>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Crea una bodega con su ubicación general.");
 
         grupo.MapPost("/bodegas/{id:guid}/ubicaciones", async (
@@ -155,6 +158,9 @@ public static class EndpointsInventario
             }
         })
             .RequireAuthorization(Permiso.InventarioAjustar)
+            .Produces<RespuestaUbicacion>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Añade una ubicación a una bodega.");
     }
 
@@ -198,6 +204,12 @@ public static class EndpointsInventario
             return Respuesta(resultado, m => Results.Created($"/inventario/movimientos/{m[0].Id}", Proyectar(m[0])));
         })
             .RequireAuthorization(Permiso.InventarioMover)
+            .Produces<RespuestaMovimiento>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status501NotImplemented)
             .WithSummary("Registra una entrada, una salida o un ajuste.");
 
         grupo.MapPost("/traslados", async (
@@ -223,6 +235,9 @@ public static class EndpointsInventario
                 m.Select(Proyectar).ToList()));
         })
             .RequireAuthorization(Permiso.InventarioMover)
+            .Produces<List<RespuestaMovimiento>>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Traslada existencias entre ubicaciones, conservando el costo.");
 
         grupo.MapPost("/movimientos/{id:guid}/reversa", async (
@@ -241,6 +256,9 @@ public static class EndpointsInventario
             return Respuesta(resultado, m => Results.Created($"/inventario/movimientos/{m[0].Id}", Proyectar(m[0])));
         })
             .RequireAuthorization(Permiso.InventarioAjustar)
+            .Produces<RespuestaMovimiento>(StatusCodes.Status201Created)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .WithSummary("Reversa un movimiento creando su opuesto; el original no se toca.");
     }
 
@@ -269,6 +287,7 @@ public static class EndpointsInventario
             return Results.Ok(existencias.Select(Proyectar).ToList());
         })
             .RequireAuthorization(Permiso.InventarioLeer)
+            .Produces<List<RespuestaExistencia>>(StatusCodes.Status200OK)
             .WithSummary("Existencias por variante, bodega y ubicación.");
 
         grupo.MapGet("/kardex", async (
@@ -292,6 +311,7 @@ public static class EndpointsInventario
             return Results.Ok(movimientos.Select(Proyectar).ToList());
         })
             .RequireAuthorization(Permiso.InventarioLeer)
+            .Produces<List<RespuestaMovimiento>>(StatusCodes.Status200OK)
             .WithSummary("Kardex de una variante en orden cronológico.");
     }
 

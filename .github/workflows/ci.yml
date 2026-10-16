@@ -96,3 +96,119 @@ jobs:
             echo "::error::El filtro no ejecutó ninguna prueba de integración."
             exit 1
           fi
+
+  web:
+    name: Web (compilación y unitarias)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      # `tsc --noEmit` antes del build: el cliente está tipado desde el OpenAPI, así que un
+      # cambio de contrato en la Api tiene que romper aquí y no en una pantalla del usuario.
+      - run: npm run build
+      - run: npm test
+
+  e2e:
+    name: Web de punta a punta (navegador real)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 10
+    env:
+      CADENA: Host=127.0.0.1;Port=5432;Database=gestorinve;Username=gestorinve;Password=gestorinve
+      CLAVE_JWT: clave-de-ci-con-mas-de-32-bytes-para-hmac-sha256
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Rol sin privilegios para la aplicación
+        env:
+          PGPASSWORD: postgres
+        run: |
+          set -euo pipefail
+          psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
+            -c "create role gestorinve login password 'gestorinve';" \
+            -c "create database gestorinve owner gestorinve;"
+          test "$(psql -h 127.0.0.1 -U postgres -tAc \
+            "select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'")" = "f"
+      - name: Migrar la base de datos
+        env:
+          GESTORINVE_CONEXION: ${{ env.CADENA }}
+        run: |
+          set -euo pipefail
+          dotnet tool install --global dotnet-ef --version 10.0.12
+          export PATH="$PATH:$HOME/.dotnet/tools"
+          # Sin esto la Api arrancaría «sana» contra una base vacía y el e2e fallaría al
+          # primer alta: la Api no migra en el arranque a propósito.
+          dotnet ef database update \
+            --project src/GestorInve.Persistencia \
+            --startup-project src/GestorInve.Api
+      - name: Compilar
+        run: |
+          set -euo pipefail
+          dotnet build src/GestorInve.Api --configuration Release
+          cd web && npm ci && npm run build
+          npx playwright install --with-deps chromium
+      - name: Arrancar y probar de punta a punta
+        run: |
+          set -euo pipefail
+          # Api y web se arrancan **en este mismo paso**: un proceso en segundo plano no
+          # sobrevive al final del paso que lo lanzó.
+          ASPNETCORE_URLS=http://127.0.0.1:5080 \
+          ConnectionStrings__GestorInve="$CADENA" \
+          Jwt__Clave="$CLAVE_JWT" \
+            dotnet src/GestorInve.Api/bin/Release/net10.0/GestorInve.Api.dll > api.log 2>&1 &
+          api=$!
+
+          node web/e2e/servidor.mjs > web.log 2>&1 &
+          web=$!
+
+          esperar() {
+            for intento in $(seq 1 30); do
+              curl -fsS "$1" > /dev/null && return 0
+              sleep 2
+            done
+            return 1
+          }
+
+          if ! esperar http://127.0.0.1:5080/ready; then
+            echo "::error::La Api no respondió en /ready"; cat api.log; exit 1
+          fi
+
+          if ! esperar http://127.0.0.1:4173/; then
+            echo "::error::La web no respondió"; cat web.log; exit 1
+          fi
+
+          cd web && npx playwright test
+          codigo=$?
+
+          kill $api $web 2>/dev/null || true
+          exit $codigo
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: rastros-e2e
+          path: |
+            web/test-results
+            api.log
+            web.log

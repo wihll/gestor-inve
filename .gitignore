@@ -8,3 +8,6 @@ coverage/
 graphify-out/cache/
 node_modules/
 obj/
+web/dist/
+web/playwright-report/
+web/test-results/

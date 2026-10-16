@@ -50,3 +50,10 @@ Pendiente de ratificar en [[decisiones/0001-stack]].
 - Las existencias se cuentan por (variante, bodega, **ubicación**); toda bodega nace con su ubicación `GENERAL`.
 - Concurrencia con bloqueo pesimista (`SELECT … FOR UPDATE`) sobre la celda; medido: sin él, 10 salidas simultáneas dejan 90 en vez de 50.
 - **Las dependencias entre módulos ahora se declaran** en `ArquitecturaTests` (`Inventario → Catalogo`) y el grafo no puede tener ciclos. Motivos en [[decisiones/0006-kardex-inmutable-y-costeo]].
+
+## Web (H3)
+- `web/` — Vite + React + TypeScript. Tipos **generados del OpenAPI** (`src/api/esquema.ts`); un cambio de contrato rompe el build.
+- Token de acceso en memoria, de refresco en `localStorage` con el riesgo documentado, y **un solo refresco en vuelo** (si no, el servidor interpretaría reutilización y echaría al usuario).
+- Pantallas: entrar, alta de empresa, catálogo, inventario y kardex. Accesible y usable en móvil.
+- Pruebas de punta a punta en Chromium real contra la Api y PostgreSQL; la pantalla del kardex recalcula el acumulado y avisa si no cuadra.
+- Generar los tipos destapó dos defectos del contrato: los endpoints no declaraban respuestas y el enum viajaba como entero. Ver [[decisiones/0007-interfaz-web]].

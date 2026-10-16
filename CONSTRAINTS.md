@@ -24,4 +24,7 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | El kardex cuadra | La suma firmada de los movimientos es igual a las existencias, también bajo concurrencia | `InventarioTests` |
 | Kardex inmutable | Ni `UPDATE` ni `DELETE` sobre un movimiento, garantizado por disparador en la base | `InventarioTests` (SQL crudo) |
 | Existencias negativas | Solo con `inventario:ajustar`, y el movimiento queda marcado | `InventarioTests` |
+| Contrato de la Api | Los tipos de la web se generan del OpenAPI; un cambio de contrato rompe el build | Job `web` del CI (`tsc --noEmit`) |
+| Sesión en la web | Un solo refresco en vuelo; tres 401 simultáneos no pueden provocar más de un refresco | `tests/cliente.test.ts` |
+| Flujo de usuario | Registro, entrada, salida y kardex cuadrado, en navegador real contra la Api | Job `e2e` del CI |
 | Código generado | Las migraciones de EF se marcan `generated_code`; no cuenta como supresión | `.editorconfig` + ADR 0003 |

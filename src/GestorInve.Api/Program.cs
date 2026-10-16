@@ -14,6 +14,13 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Los enum viajan como texto («Entrada»), no como número. Un entero en el contrato es
+// ilegible y, peor, frágil: reordenar o insertar un valor del enum cambiaría en silencio el
+// significado de los datos que ya enviaron los clientes.
+builder.Services.ConfigureHttpJsonOptions(opciones =>
+    opciones.SerializerOptions.Converters.Add(
+        new System.Text.Json.Serialization.JsonStringEnumConverter()));
+
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();

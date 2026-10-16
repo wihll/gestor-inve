@@ -1,0 +1,2059 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "GestorInve.Api | v1",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:5302/"
+    }
+  ],
+  "paths": {
+    "/empresas": {
+      "post": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Registra una empresa con su primer administrador.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionAlta"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaAlta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usuarios": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Listado de usuarios (requiere el permiso usuarios:leer).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaUsuarioActual"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Inicia sesión con NIT, correo y contraseña.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaSesion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Locked",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/refresh": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Rota el token de refresco y entrega un token de acceso nuevo.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionRefresco"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaSesion"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Revoca la cadena de refrescos de la sesión.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionRefresco"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
+    "/auth/yo": {
+      "get": {
+        "tags": [
+          "Autenticación"
+        ],
+        "summary": "Devuelve la identidad y los permisos del token actual.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaYo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/unidades": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Unidades de medida de la empresa.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaUnidad"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Crea una unidad de medida.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionUnidad"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaUnidad"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/categorias": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Categorías de la empresa.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaCategoria"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Crea una categoría, opcionalmente bajo otra.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionCategoria"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaCategoria"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/categorias/{id}/padre": {
+      "put": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Recoloca una categoría en el árbol, rechazando ciclos.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionCategoria"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/productos": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Productos de la empresa con sus variantes.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaProducto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Crea un producto; sin atributos declarados nace con su variante única.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionProducto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaProducto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/productos/{id}": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Un producto por identificador.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaProducto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/productos/{id}/variantes": {
+      "post": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Añade una variante con sus valores de atributo.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionVariante"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaVariante"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/variantes/{id}/codigos": {
+      "post": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Añade un código de barras a una variante.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionCodigo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaCodigo"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/variantes/{id}/limites": {
+      "put": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Fija las existencias mínimas y máximas de una variante.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionLimites"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/catalogo/codigos/{codigo}": {
+      "get": {
+        "tags": [
+          "Catálogo"
+        ],
+        "summary": "Resuelve un código escaneado a su variante.",
+        "parameters": [
+          {
+            "name": "codigo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaVarianteDeCodigo"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/bodegas": {
+      "get": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Bodegas con sus ubicaciones.",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaBodega"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Crea una bodega con su ubicación general.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionBodega"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaBodega"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/bodegas/{id}/ubicaciones": {
+      "post": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Añade una ubicación a una bodega.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionUbicacion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaUbicacion"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/movimientos": {
+      "post": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Registra una entrada, una salida o un ajuste.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionMovimiento"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaMovimiento"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "Not Implemented",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/traslados": {
+      "post": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Traslada existencias entre ubicaciones, conservando el costo.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionTraslado"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaMovimiento"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/movimientos/{id}/reversa": {
+      "post": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Reversa un movimiento creando su opuesto; el original no se toca.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionReversa"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaMovimiento"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/existencias": {
+      "get": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Existencias por variante, bodega y ubicación.",
+        "parameters": [
+          {
+            "name": "varianteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "bodegaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaExistencia"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventario/kardex": {
+      "get": {
+        "tags": [
+          "Inventario"
+        ],
+        "summary": "Kardex de una variante en orden cronológico.",
+        "parameters": [
+          {
+            "name": "varianteId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "bodegaId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RespuestaMovimiento"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PeticionAlta": {
+        "required": [
+          "nit",
+          "razonSocial",
+          "correoAdmin",
+          "nombreAdmin",
+          "contrasena"
+        ],
+        "type": "object",
+        "properties": {
+          "nit": {
+            "type": "string"
+          },
+          "razonSocial": {
+            "type": "string"
+          },
+          "correoAdmin": {
+            "type": "string"
+          },
+          "nombreAdmin": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string"
+          }
+        }
+      },
+      "PeticionBodega": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        }
+      },
+      "PeticionCategoria": {
+        "required": [
+          "nombre",
+          "padreId"
+        ],
+        "type": "object",
+        "properties": {
+          "nombre": {
+            "type": "string"
+          },
+          "padreId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "PeticionCodigo": {
+        "required": [
+          "codigo"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          }
+        }
+      },
+      "PeticionLimites": {
+        "required": [
+          "stockMinimo",
+          "stockMaximo"
+        ],
+        "type": "object",
+        "properties": {
+          "stockMinimo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stockMaximo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          }
+        }
+      },
+      "PeticionLogin": {
+        "required": [
+          "nit",
+          "correo",
+          "contrasena"
+        ],
+        "type": "object",
+        "properties": {
+          "nit": {
+            "type": "string"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "contrasena": {
+            "type": "string"
+          }
+        }
+      },
+      "PeticionMovimiento": {
+        "required": [
+          "tipo",
+          "varianteId",
+          "bodegaId",
+          "ubicacionId",
+          "cantidad",
+          "costoUnitario",
+          "fecha",
+          "referencia",
+          "observacion"
+        ],
+        "type": "object",
+        "properties": {
+          "tipo": {
+            "$ref": "#/components/schemas/TipoMovimiento"
+          },
+          "varianteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bodegaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ubicacionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "costoUnitario": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "referencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PeticionProducto": {
+        "required": [
+          "sku",
+          "nombre",
+          "unidadMedidaId",
+          "descripcion",
+          "categoriaId",
+          "atributos",
+          "exigeLote",
+          "exigeSerial"
+        ],
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "unidadMedidaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descripcion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "categoriaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "atributos": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "exigeLote": {
+            "type": "boolean"
+          },
+          "exigeSerial": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PeticionRefresco": {
+        "required": [
+          "tokenRefresco"
+        ],
+        "type": "object",
+        "properties": {
+          "tokenRefresco": {
+            "type": "string"
+          }
+        }
+      },
+      "PeticionReversa": {
+        "required": [
+          "observacion"
+        ],
+        "type": "object",
+        "properties": {
+          "observacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PeticionTraslado": {
+        "required": [
+          "varianteId",
+          "bodegaOrigenId",
+          "ubicacionOrigenId",
+          "bodegaDestinoId",
+          "ubicacionDestinoId",
+          "cantidad",
+          "fecha",
+          "referencia",
+          "observacion"
+        ],
+        "type": "object",
+        "properties": {
+          "varianteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bodegaOrigenId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ubicacionOrigenId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bodegaDestinoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ubicacionDestinoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fecha": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "referencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "PeticionUbicacion": {
+        "required": [
+          "codigo",
+          "nombre"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          }
+        }
+      },
+      "PeticionUnidad": {
+        "required": [
+          "codigo",
+          "nombre",
+          "decimales"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "decimales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PeticionVariante": {
+        "required": [
+          "sku",
+          "atributos"
+        ],
+        "type": "object",
+        "properties": {
+          "sku": {
+            "type": "string"
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "instance": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RespuestaAlta": {
+        "required": [
+          "empresaId"
+        ],
+        "type": "object",
+        "properties": {
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RespuestaBodega": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "activa",
+          "ubicaciones"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "activa": {
+            "type": "boolean"
+          },
+          "ubicaciones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RespuestaUbicacion"
+            }
+          }
+        }
+      },
+      "RespuestaCategoria": {
+        "required": [
+          "id",
+          "nombre",
+          "padreId",
+          "activa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "padreId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "activa": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RespuestaCodigo": {
+        "required": [
+          "codigo"
+        ],
+        "type": "object",
+        "properties": {
+          "codigo": {
+            "type": "string"
+          }
+        }
+      },
+      "RespuestaExistencia": {
+        "required": [
+          "varianteId",
+          "bodegaId",
+          "ubicacionId",
+          "cantidad",
+          "unidad",
+          "costoPromedio",
+          "valorizado",
+          "moneda"
+        ],
+        "type": "object",
+        "properties": {
+          "varianteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bodegaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ubicacionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "costoPromedio": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "valorizado": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "moneda": {
+            "type": "string"
+          }
+        }
+      },
+      "RespuestaMovimiento": {
+        "required": [
+          "id",
+          "tipo",
+          "varianteId",
+          "bodegaId",
+          "ubicacionId",
+          "cantidad",
+          "unidad",
+          "costoUnitario",
+          "costoTotal",
+          "moneda",
+          "saldoCantidadDespues",
+          "saldoCostoPromedioDespues",
+          "fecha",
+          "usuario",
+          "referencia",
+          "observacion",
+          "trasladoId",
+          "movimientoReversadoId",
+          "forzadoNegativo"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "$ref": "#/components/schemas/TipoMovimiento"
+          },
+          "varianteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bodegaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ubicacionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "cantidad": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "unidad": {
+            "type": "string"
+          },
+          "costoUnitario": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "costoTotal": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "moneda": {
+            "type": "string"
+          },
+          "saldoCantidadDespues": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "saldoCostoPromedioDespues": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "fecha": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "usuario": {
+            "type": "string"
+          },
+          "referencia": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "observacion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "trasladoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "movimientoReversadoId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "forzadoNegativo": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RespuestaProducto": {
+        "required": [
+          "id",
+          "sku",
+          "nombre",
+          "descripcion",
+          "unidadMedidaId",
+          "categoriaId",
+          "atributos",
+          "exigeLote",
+          "exigeSerial",
+          "activo",
+          "variantes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "descripcion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unidadMedidaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "categoriaId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "atributos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "exigeLote": {
+            "type": "boolean"
+          },
+          "exigeSerial": {
+            "type": "boolean"
+          },
+          "activo": {
+            "type": "boolean"
+          },
+          "variantes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RespuestaVariante"
+            }
+          }
+        }
+      },
+      "RespuestaSesion": {
+        "required": [
+          "tokenAcceso",
+          "tokenRefresco",
+          "expiraEn"
+        ],
+        "type": "object",
+        "properties": {
+          "tokenAcceso": {
+            "type": "string"
+          },
+          "tokenRefresco": {
+            "type": "string"
+          },
+          "expiraEn": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "RespuestaUbicacion": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "activa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "activa": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RespuestaUnidad": {
+        "required": [
+          "id",
+          "codigo",
+          "nombre",
+          "decimales",
+          "activa"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "codigo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "decimales": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "activa": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RespuestaUsuarioActual": {
+        "required": [
+          "usuario"
+        ],
+        "type": "object",
+        "properties": {
+          "usuario": {
+            "type": "string"
+          }
+        }
+      },
+      "RespuestaVariante": {
+        "required": [
+          "id",
+          "sku",
+          "atributos",
+          "stockMinimo",
+          "stockMaximo",
+          "activa",
+          "codigos"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "atributos": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "stockMinimo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "stockMaximo": {
+            "pattern": "^-?(?:0|[1-9]\\d*)(?:\\.\\d+)?$",
+            "type": [
+              "null",
+              "number",
+              "string"
+            ],
+            "format": "double"
+          },
+          "activa": {
+            "type": "boolean"
+          },
+          "codigos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "RespuestaVarianteDeCodigo": {
+        "required": [
+          "varianteId"
+        ],
+        "type": "object",
+        "properties": {
+          "varianteId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "RespuestaYo": {
+        "required": [
+          "usuarioId",
+          "empresaId",
+          "correo",
+          "nombre",
+          "permisos"
+        ],
+        "type": "object",
+        "properties": {
+          "usuarioId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "empresaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "correo": {
+            "type": "string"
+          },
+          "nombre": {
+            "type": "string"
+          },
+          "permisos": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "TipoMovimiento": {
+        "enum": [
+          "Entrada",
+          "Salida",
+          "TrasladoSalida",
+          "TrasladoEntrada",
+          "AjustePositivo",
+          "AjusteNegativo"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Empresas"
+    },
+    {
+      "name": "Usuarios"
+    },
+    {
+      "name": "Autenticación"
+    },
+    {
+      "name": "Catálogo"
+    },
+    {
+      "name": "Inventario"
+    }
+  ]
+}

@@ -12,6 +12,12 @@ public sealed record RespuestaSesion(string TokenAcceso, string TokenRefresco, D
 
 public sealed record PeticionAlta(string Nit, string RazonSocial, string CorreoAdmin, string NombreAdmin, string Contrasena);
 
+/// <summary>Resultado del alta de empresa.</summary>
+/// <summary>Marcador hasta que exista el listado real de usuarios.</summary>
+public sealed record RespuestaUsuarioActual(string Usuario);
+
+public sealed record RespuestaAlta(Guid EmpresaId);
+
 public sealed record RespuestaYo(Guid UsuarioId, Guid EmpresaId, string Correo, string Nombre, IReadOnlyList<string> Permisos);
 
 public static class EndpointsAutenticacion
@@ -34,6 +40,9 @@ public static class EndpointsAutenticacion
             return Respuesta(resultado);
         })
         .AllowAnonymous()
+        .Produces<RespuestaSesion>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
+        .ProducesProblem(StatusCodes.Status423Locked)
         .WithSummary("Inicia sesión con NIT, correo y contraseña.");
 
         grupo.MapPost("/refresh", async (
@@ -46,6 +55,8 @@ public static class EndpointsAutenticacion
             return Respuesta(resultado);
         })
         .AllowAnonymous()
+        .Produces<RespuestaSesion>(StatusCodes.Status200OK)
+        .ProducesProblem(StatusCodes.Status401Unauthorized)
         .WithSummary("Rota el token de refresco y entrega un token de acceso nuevo.");
 
         grupo.MapPost("/logout", async (
@@ -58,6 +69,7 @@ public static class EndpointsAutenticacion
             return Results.NoContent();
         })
         .AllowAnonymous()
+        .Produces(StatusCodes.Status204NoContent)
         .WithSummary("Revoca la cadena de refrescos de la sesión.");
 
         grupo.MapGet("/yo", (ClaimsPrincipal principal) =>
@@ -73,6 +85,7 @@ public static class EndpointsAutenticacion
                 [.. principal.FindAll(ClaimsGestorInve.Permiso).Select(c => c.Value)]));
         })
         .RequireAuthorization()
+        .Produces<RespuestaYo>(StatusCodes.Status200OK)
         .WithSummary("Devuelve la identidad y los permisos del token actual.");
 
         return rutas;
@@ -97,18 +110,21 @@ public static class EndpointsAutenticacion
                 cancelacion);
 
             return resultado.Exitoso
-                ? Results.Created($"/empresas/{resultado.EmpresaId}", new { empresaId = resultado.EmpresaId })
+                ? Results.Created($"/empresas/{resultado.EmpresaId}", new RespuestaAlta(resultado.EmpresaId))
                 : Results.Problem(detail: resultado.Error, statusCode: StatusCodes.Status409Conflict);
         })
         .AllowAnonymous()
         .WithTags("Empresas")
+        .Produces<RespuestaAlta>(StatusCodes.Status201Created)
+        .ProducesProblem(StatusCodes.Status409Conflict)
         .WithSummary("Registra una empresa con su primer administrador.");
 
         // Endpoint de ejemplo para comprobar la autorización por permiso.
         rutas.MapGet("/usuarios", (ClaimsPrincipal principal) =>
-            Results.Ok(new { usuario = principal.FindFirstValue(ClaimTypes.Email) }))
+            Results.Ok(new RespuestaUsuarioActual(principal.FindFirstValue(ClaimTypes.Email) ?? string.Empty)))
             .RequireAuthorization(Permiso.UsuariosLeer)
             .WithTags("Usuarios")
+            .Produces<RespuestaUsuarioActual>(StatusCodes.Status200OK)
             .WithSummary("Listado de usuarios (requiere el permiso usuarios:leer).");
 
         return rutas;
