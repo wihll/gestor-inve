@@ -1,0 +1,53 @@
+# Actualizaciones de dependencias. Semanal y agrupadas: un PR por ecosistema y semana se
+# revisa; veinte PRs sueltos se ignoran, y una dependencia que nadie actualiza es la vía más
+# común de entrar a un ERP que maneja datos fiscales.
+version: 2
+
+updates:
+  - package-ecosystem: nuget
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Las bibliotecas de un mismo producto suben de versión juntas: separarlas produce
+      # combinaciones que nadie probó (EF Core 10.1 con Npgsql compilado contra 10.0).
+      aspnetcore:
+        patterns: ["Microsoft.AspNetCore.*", "Microsoft.Extensions.*", "Microsoft.IdentityModel.*", "System.IdentityModel.*"]
+      efcore:
+        patterns: ["Microsoft.EntityFrameworkCore.*", "Npgsql*"]
+      pruebas:
+        patterns: ["xunit*", "FsCheck*", "NetArchTest*", "coverlet*", "Microsoft.NET.Test.Sdk"]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: npm
+    directory: "/web"
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom", "react-router-dom"]
+      herramientas:
+        patterns: ["vite", "@vitejs/*", "vitest", "typescript", "openapi-typescript", "@playwright/*"]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: docker
+    directories: ["/", "/web"]
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "deps"

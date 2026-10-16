@@ -1,0 +1,62 @@
+# Despliegue de una sola máquina: PostgreSQL, Api y web. Pensado para que una pyme lo
+# levante con `docker compose up -d` y para que el CI lo arranque igual, sin una receta
+# distinta que nadie ejecuta.
+#
+# Las credenciales se leen del entorno con `:?`, que **falla si faltan**. Un valor por
+# omisión aquí sería una clave publicada en el repositorio: cualquiera que clonara el
+# proyecto sabría la clave de firma de los tokens de todas las instalaciones que no la
+# cambiaron. Copiar `.env.ejemplo` a `.env` y generar los secretos es parte de la instalación.
+
+name: gestorinve
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      # `postgres` sigue siendo el superusuario; la aplicación **no** lo usa.
+      POSTGRES_PASSWORD: ${POSTGRES_CLAVE:?falta POSTGRES_CLAVE}
+      GESTORINVE_CLAVE_BD: ${GESTORINVE_CLAVE_BD:?falta GESTORINVE_CLAVE_BD}
+    volumes:
+      - datos-db:/var/lib/postgresql/data
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/10-gestorinve.sh:ro
+    healthcheck:
+      # Sobre la base y el rol de la aplicación, no sobre `postgres`: así el «sano» significa
+      # que la Api puede conectarse de verdad, y no solo que el motor arrancó.
+      test: ["CMD-SHELL", "pg_isready -U gestorinve -d gestorinve"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 20s
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      ConnectionStrings__GestorInve: >-
+        Host=db;Port=5432;Database=gestorinve;Username=gestorinve;Password=${GESTORINVE_CLAVE_BD:?falta GESTORINVE_CLAVE_BD}
+      Jwt__Clave: ${JWT_CLAVE:?falta JWT_CLAVE}
+      # El contenedor es el dueño del esquema: aplica las migraciones pendientes al arrancar.
+      # Es el mismo camino que usan el CI y el instalador (ver ADR 0008).
+      GESTORINVE_MIGRAR: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    ports:
+      # Solo la web publica puerto. La Api no se expone al anfitrión: se alcanza a través de
+      # nginx, en el mismo origen. Un puerto menos expuesto es una superficie menos.
+      - "${PUERTO_WEB:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  datos-db:

@@ -237,3 +237,89 @@ jobs:
             api.log
             web.log
             playwright.log
+
+  compose:
+    name: Despliegue con Docker Compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Secretos de la instalación
+        run: |
+          set -euo pipefail
+          # Generados en el momento: el compose falla si faltan (`:?`), y eso es parte de lo
+          # que se comprueba aquí. Una clave fija en el repositorio sería la clave de firma
+          # de todas las instalaciones que no la cambiaran.
+          {
+            echo "POSTGRES_CLAVE=$(openssl rand -base64 32)"
+            echo "GESTORINVE_CLAVE_BD=$(openssl rand -base64 32 | tr -d '/+=')"
+            echo "JWT_CLAVE=$(openssl rand -base64 48)"
+            echo "PUERTO_WEB=8080"
+          } > .env
+      - name: El compose exige los secretos
+        run: |
+          set -euo pipefail
+          # Comprobación invertida: sin `.env` el compose **debe** fallar. Si arrancara con
+          # valores por omisión, la instalación de una pyme quedaría con secretos públicos.
+          if docker compose --env-file /dev/null config > /dev/null 2>&1; then
+            echo "::error::El compose arrancó sin secretos declarados."
+            exit 1
+          fi
+      - name: Construir y levantar
+        run: |
+          set -euo pipefail
+          docker compose up --build --detach --wait --wait-timeout 420
+      - name: El rol de la base no tiene privilegios
+        run: |
+          set -euo pipefail
+          # La garantía de aislamiento de H2 depende de esto: un superusuario (o BYPASSRLS)
+          # ignora las políticas RLS y una empresa vería los datos de otra.
+          privilegiado=$(docker compose exec -T db psql -tAc \
+            "select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'" \
+            --username postgres --dbname postgres | tr -d '[:space:]')
+          test "$privilegiado" = "f"
+      - name: El esquema quedó aplicado
+        run: |
+          set -euo pipefail
+          # `GESTORINVE_MIGRAR=true` en el compose: si no migrara, la Api arrancaría «sana»
+          # contra una base vacía y el primer alta fallaría ya instalado.
+          tablas=$(docker compose exec -T db psql -tAc \
+            "select count(*) from information_schema.tables
+             where table_schema in ('auditoria','catalogo','inventario','seguridad')" \
+            --username postgres --dbname gestorinve | tr -d '[:space:]')
+          echo "Tablas de la aplicación: $tablas"
+          test "$tablas" -ge 16
+      - name: La web y la Api responden en el mismo origen
+        run: |
+          set -euo pipefail
+          # La web sirve el SPA y reenvía los prefijos de la Api; la Api **no** publica puerto.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)" = "200"
+          # Una ruta del enrutador del cliente tiene que devolver el index, no un 404 de nginx.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/inventario)" = "200"
+          # 401 y no 404: la petición llegó a la Api a través del proxy y la rechazó por falta
+          # de credenciales, que es la respuesta correcta.
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/auth/yo)" = "401"
+          # El alta de empresa es el único flujo que escribe sin sesión previa: si responde,
+          # la cadena nginx → Api → PostgreSQL con RLS funciona de punta a punta.
+          codigo=$(curl -s -o alta.json -w '%{http_code}' \
+            -X POST http://127.0.0.1:8080/empresas \
+            -H 'content-type: application/json' \
+            -d '{"nit":"DOCKER9000001","razonSocial":"Prueba Compose",
+                 "correoAdmin":"admin@prueba.test","nombreAdmin":"Administrador",
+                 "contrasena":"Contrasena-De-Prueba-1"}')
+          echo "alta: $codigo $(cat alta.json)"
+          test "$codigo" = "201"
+      - name: El contenedor de la Api se declara sano
+        run: |
+          set -euo pipefail
+          # `--wait` ya espera los healthchecks, pero se comprueba el estado explícitamente:
+          # un HEALTHCHECK mal escrito deja el contenedor en «starting» sin que nada falle.
+          estado=$(docker inspect --format '{{.State.Health.Status}}' \
+            "$(docker compose ps -q api)")
+          echo "api: $estado"
+          test "$estado" = "healthy"
+      - name: Diagnóstico
+        if: always()
+        run: docker compose logs --no-color --tail 200
+      - name: Bajar
+        if: always()
+        run: docker compose down --volumes

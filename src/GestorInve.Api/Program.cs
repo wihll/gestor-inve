@@ -12,6 +12,16 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+// `--comprobar-salud` existe por el contenedor: la imagen de runtime de ASP.NET no trae
+// `curl` ni `wget`, así que el `HEALTHCHECK` de Docker no tiene con qué consultar `/ready`.
+// Antes que instalar un paquete entero en la imagen final, el propio ejecutable sabe
+// preguntarle a la instancia que ya está escuchando y traducir la respuesta a un código de
+// salida. No arranca el host: solo hace una petición y termina.
+if (args.Contains("--comprobar-salud", StringComparer.Ordinal))
+{
+    return await Sonda.ComprobarAsync();
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Los enum viajan como texto («Entrada»), no como número. Un entero en el contrato es
@@ -142,6 +152,8 @@ if (conPersistencia)
 }
 
 await app.RunAsync();
+
+return 0;
 
 /// <summary>Expuesta para las pruebas de integración con WebApplicationFactory.</summary>
 public partial class Program;

@@ -1,0 +1,57 @@
+# Análisis estático de seguridad. Va en su propio workflow y no dentro de `ci.yml` porque la
+# compilación con `security-extended` tarda bastante más que las pruebas, y no tiene sentido
+# retrasar el ciclo de cada push por ella. Semanal además de por PR: las consultas de CodeQL
+# se actualizan, así que un código que pasó hace un mes puede tener un hallazgo nuevo hoy.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "37 5 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analizar:
+    name: CodeQL (${{ matrix.lenguaje }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lenguaje: csharp
+            modo: manual
+          - lenguaje: javascript-typescript
+            modo: none
+          - lenguaje: actions
+            modo: none
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        if: matrix.lenguaje == 'csharp'
+        with:
+          global-json-file: global.json
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.lenguaje }}
+          build-mode: ${{ matrix.modo }}
+          # `security-extended` añade consultas de menor precisión pero mayor cobertura. En un
+          # sistema que guarda credenciales y datos fiscales, preferimos revisar falsos
+          # positivos a no enterarnos de una inyección.
+          queries: security-extended
+
+      - name: Compilar
+        if: matrix.lenguaje == 'csharp'
+        # Sin `-warnaserror`: aquí interesa que CodeQL vea todo el código, no repetir el
+        # control de calidad que ya hace `ci.yml`.
+        run: dotnet build --configuration Release
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/lenguaje:${{ matrix.lenguaje }}"
