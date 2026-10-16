@@ -290,24 +290,45 @@ jobs:
           test "$tablas" -ge 16
       - name: La web y la Api responden en el mismo origen
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # Cada comprobación informa **qué pidió, qué esperaba y qué obtuvo**, como anotación:
+          # el registro completo del job no siempre es legible desde donde se escribió este
+          # workflow, y un `test` a secas solo dice «exit 1».
+          fallos=0
+          comprobar() { # comprobar <descripción> <esperado> <método> <ruta> [datos]
+            if [ -n "${5:-}" ]; then
+              codigo=$(curl -s -o cuerpo.txt -w '%{http_code}' -X "$3" "http://127.0.0.1:8080$4" \
+                -H 'content-type: application/json' -d "$5")
+            else
+              codigo=$(curl -s -o cuerpo.txt -w '%{http_code}' -X "$3" "http://127.0.0.1:8080$4")
+            fi
+
+            if [ "$codigo" = "$2" ]; then
+              echo "ok   $3 $4 -> $codigo ($1)"
+            else
+              fallos=$((fallos + 1))
+              echo "::error title=$1::$3 $4 devolvió $codigo y se esperaba $2. Cuerpo: $(head -c 900 cuerpo.txt | tr '\n%\r' '  ')"
+            fi
+          }
+
           # La web sirve el SPA y reenvía los prefijos de la Api; la Api **no** publica puerto.
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/)" = "200"
+          comprobar "La web no sirve el SPA" 200 GET /
           # Una ruta del enrutador del cliente tiene que devolver el index, no un 404 de nginx.
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/inventario)" = "200"
+          comprobar "nginx no resuelve las rutas del SPA" 200 GET /inventario
           # 401 y no 404: la petición llegó a la Api a través del proxy y la rechazó por falta
           # de credenciales, que es la respuesta correcta.
-          test "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/auth/yo)" = "401"
+          comprobar "El proxy no llega a la Api" 401 GET /auth/yo
           # El alta de empresa es el único flujo que escribe sin sesión previa: si responde,
           # la cadena nginx → Api → PostgreSQL con RLS funciona de punta a punta.
-          codigo=$(curl -s -o alta.json -w '%{http_code}' \
-            -X POST http://127.0.0.1:8080/empresas \
-            -H 'content-type: application/json' \
-            -d '{"nit":"DOCKER9000001","razonSocial":"Prueba Compose",
-                 "correoAdmin":"admin@prueba.test","nombreAdmin":"Administrador",
-                 "contrasena":"Contrasena-De-Prueba-1"}')
-          echo "alta: $codigo $(cat alta.json)"
-          test "$codigo" = "201"
+          comprobar "El alta de empresa falló" 201 POST /empresas \
+            '{"nit":"DOCKER9000001","razonSocial":"Prueba Compose","correoAdmin":"admin@prueba.test","nombreAdmin":"Administrador","contrasena":"Contrasena-De-Prueba-1"}'
+
+          if [ "$fallos" -ne 0 ]; then
+            echo "::error::$fallos comprobaciones HTTP fallaron sobre el despliegue."
+            docker compose logs --no-color --tail 120 api \
+              | tail -c 1800 | tr '\n%\r' '  ' | sed 's/^/::error title=Registro de la Api::/'
+            exit 1
+          fi
       - name: El contenedor de la Api se declara sano
         run: |
           set -euo pipefail

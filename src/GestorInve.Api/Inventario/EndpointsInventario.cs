@@ -117,7 +117,7 @@ public static class EndpointsInventario
             var bodega = Bodega.Crear(peticion.Codigo, peticion.Nombre);
             db.Add(bodega);
 
-            return await GuardarAsync(db, () => Results.Created($"/inventario/bodegas/{bodega.Id}", Proyectar(bodega)), ct);
+            return await GuardarAsync(db, () => Results.Created($"/api/inventario/bodegas/{bodega.Id}", Proyectar(bodega)), ct);
         })
             .RequireAuthorization(Permiso.InventarioAjustar)
             .Produces<RespuestaBodega>(StatusCodes.Status201Created)
@@ -149,7 +149,7 @@ public static class EndpointsInventario
 
                 return await GuardarAsync(
                     db,
-                    () => Results.Created($"/inventario/bodegas/{id}/ubicaciones/{ubicacion.Id}", Proyectar(ubicacion)),
+                    () => Results.Created($"/api/inventario/bodegas/{id}/ubicaciones/{ubicacion.Id}", Proyectar(ubicacion)),
                     ct);
             }
             catch (InvalidOperationException error)
@@ -201,7 +201,7 @@ public static class EndpointsInventario
                 permitirNegativo: PuedeAjustar(principal),
                 ct);
 
-            return Respuesta(resultado, m => Results.Created($"/inventario/movimientos/{m[0].Id}", Proyectar(m[0])));
+            return Respuesta(resultado, m => Results.Created($"/api/inventario/movimientos/{m[0].Id}", Proyectar(m[0])));
         })
             .RequireAuthorization(Permiso.InventarioMover)
             .Produces<RespuestaMovimiento>(StatusCodes.Status201Created)
@@ -231,7 +231,7 @@ public static class EndpointsInventario
                 ct);
 
             return Respuesta(resultado, m => Results.Created(
-                $"/inventario/traslados/{m[0].TrasladoId}",
+                $"/api/inventario/traslados/{m[0].TrasladoId}",
                 m.Select(Proyectar).ToList()));
         })
             .RequireAuthorization(Permiso.InventarioMover)
@@ -253,7 +253,7 @@ public static class EndpointsInventario
                 permitirNegativo: PuedeAjustar(principal),
                 ct);
 
-            return Respuesta(resultado, m => Results.Created($"/inventario/movimientos/{m[0].Id}", Proyectar(m[0])));
+            return Respuesta(resultado, m => Results.Created($"/api/inventario/movimientos/{m[0].Id}", Proyectar(m[0])));
         })
             .RequireAuthorization(Permiso.InventarioAjustar)
             .Produces<RespuestaMovimiento>(StatusCodes.Status201Created)

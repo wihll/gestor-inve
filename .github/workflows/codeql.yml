@@ -14,6 +14,12 @@ on:
 permissions:
   contents: read
   security-events: write
+  # `actions: read` no es opcional: sin él, la acción de CodeQL no puede consultar su propia
+  # ejecución y falla con «Resource not accessible by integration», que no dice nada sobre el
+  # código. En un repositorio privado hace falta además GitHub Advanced Security para que el
+  # análisis se pueda subir; sin ella, este workflow seguirá en rojo por política de la cuenta
+  # y no por un hallazgo.
+  actions: read
 
 jobs:
   analizar:

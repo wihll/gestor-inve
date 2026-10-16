@@ -23,8 +23,14 @@ Qué migraciones se aplicaron queda en la traza (`GestorInve.Migraciones`, event
 
 Es la misma comprobación que ya hacía el CI, llevada a la instalación. Un superusuario (o cualquier rol con `BYPASSRLS`) ignora las políticas de Row Level Security de [[0003-persistencia-y-aislamiento]]: una consulta mal filtrada devolvería los datos de **todas** las empresas, y ninguna prueba lo notaría porque las políticas seguirían ahí, simplemente sin aplicarse. Es el fallo más grave que este sistema puede tener y el más silencioso.
 
-### Mismo origen: la Api no publica puerto
-Solo el contenedor de la web publica puerto. nginx sirve el SPA y reenvía los prefijos `/auth`, `/empresas`, `/catalogo`, `/inventario` y `/usuarios` a la Api por la red interna del compose.
+### Mismo origen, y la Api bajo `/api`
+Solo el contenedor de la web publica puerto. nginx sirve el SPA y reenvía a la Api, por la red interna del compose, **un único prefijo: `/api`**.
+
+Ese prefijo no estaba, y su ausencia era un defecto real que destapó el job de despliegue de este mismo hito. nginx enrutaba por los prefijos de cada grupo de la Api (`/auth`, `/empresas`, `/catalogo`, `/inventario`, `/usuarios`), y dos de ellos —`/catalogo` e `/inventario`— son **también** rutas del enrutador del cliente. Al navegar dentro de la aplicación no se notaba, porque el enrutador resuelve en el navegador y no pide la ruta al servidor; pero abrir `http://servidor/inventario` directamente —un favorito, un enlace compartido por WhatsApp, una recarga con F5— sí la pide, y acababa en la Api, que no tiene esa ruta: **404**.
+
+El mismo fallo estaba en el proxy de desarrollo de Vite y en el servidor de las pruebas de punta a punta, y ninguna prueba lo cubría porque todas navegaban con el enrutador. Ahora hay una que abre esas rutas de verdad, y se comprobó restaurando el enrutado viejo: devuelve 404 y la prueba falla.
+
+Un prefijo propio además deja sitio para que la raíz sea siempre del SPA, así que añadir una pantalla nueva no puede volver a colisionar con un grupo de la Api.
 
 Así no hace falta CORS, y queda abierta la vía de la cookie `httpOnly` que [[0007-interfaz-web]] dejó pendiente: con dos orígenes distintos, esa cookie exigiría `SameSite=None` y perdería buena parte de su valor. De paso, la Api no es alcanzable desde fuera del anfitrión.
 

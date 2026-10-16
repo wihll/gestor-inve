@@ -29,7 +29,7 @@ export function AltaEmpresa() {
 
     try {
       // El alta no necesita sesión, así que usa un cliente suelto.
-      await new ClienteApi().post("/empresas", datos);
+      await new ClienteApi().post("/api/empresas", datos);
       navegar("/entrar?alta=1");
     } catch (fallo) {
       setError(fallo instanceof Error ? fallo.message : "No se pudo registrar la empresa.");

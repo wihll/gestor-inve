@@ -32,7 +32,7 @@ public class AutenticacionTests(ApiFixture api)
 
         using var cliente = api.CreateClient();
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/empresas",
+            "/api/empresas",
             new PeticionAlta(nit, "Otra S.A.S.", "otro@empresa.co", "Otro", Clave));
 
         Assert.Equal(HttpStatusCode.Conflict, respuesta.StatusCode);
@@ -50,13 +50,13 @@ public class AutenticacionTests(ApiFixture api)
         using var cliente = api.CreateClient();
 
         using var nitFalso = await cliente.PostAsJsonAsync(
-            "/auth/login",
+            "/api/auth/login",
             new PeticionLogin(ApiFixture.NitNuevo(), correo, Clave));
         using var claveMala = await cliente.PostAsJsonAsync(
-            "/auth/login",
+            "/api/auth/login",
             new PeticionLogin(nit, correo, "Clave-Equivocada-2026"));
         using var usuarioFalso = await cliente.PostAsJsonAsync(
-            "/auth/login",
+            "/api/auth/login",
             new PeticionLogin(nit, "nadie@empresa.co", Clave));
 
         Assert.Equal(HttpStatusCode.Unauthorized, nitFalso.StatusCode);
@@ -84,12 +84,12 @@ public class AutenticacionTests(ApiFixture api)
         for (var i = 0; i < Usuario.IntentosPermitidos; i++)
         {
             using var fallo = await cliente.PostAsJsonAsync(
-                "/auth/login",
+                "/api/auth/login",
                 new PeticionLogin(nit, correo, "Clave-Equivocada-2026"));
             Assert.Equal(HttpStatusCode.Unauthorized, fallo.StatusCode);
         }
 
-        using var bloqueado = await cliente.PostAsJsonAsync("/auth/login", new PeticionLogin(nit, correo, Clave));
+        using var bloqueado = await cliente.PostAsJsonAsync("/api/auth/login", new PeticionLogin(nit, correo, Clave));
 
         Assert.Equal(HttpStatusCode.Locked, bloqueado.StatusCode);
     }
@@ -99,8 +99,8 @@ public class AutenticacionTests(ApiFixture api)
     {
         using var cliente = api.CreateClient();
 
-        using var yo = await cliente.GetAsync(new Uri("/auth/yo", UriKind.Relative));
-        using var usuarios = await cliente.GetAsync(new Uri("/usuarios", UriKind.Relative));
+        using var yo = await cliente.GetAsync(new Uri("/api/auth/yo", UriKind.Relative));
+        using var usuarios = await cliente.GetAsync(new Uri("/api/usuarios", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.Unauthorized, yo.StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, usuarios.StatusCode);
@@ -113,7 +113,7 @@ public class AutenticacionTests(ApiFixture api)
         var sesion = await LoginAsync(nit, correo, Clave);
 
         using var cliente = ClienteCon(sesion.TokenAcceso);
-        var yo = await cliente.GetFromJsonAsync<RespuestaYo>("/auth/yo");
+        var yo = await cliente.GetFromJsonAsync<RespuestaYo>("/api/auth/yo");
 
         Assert.NotNull(yo);
         Assert.Equal(correo, yo.Correo);
@@ -130,7 +130,7 @@ public class AutenticacionTests(ApiFixture api)
         var sesion = await LoginAsync(nit, correo, Clave);
 
         using var cliente = ClienteCon(sesion.TokenAcceso);
-        using var respuesta = await cliente.GetAsync(new Uri("/usuarios", UriKind.Relative));
+        using var respuesta = await cliente.GetAsync(new Uri("/api/usuarios", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
     }
@@ -146,7 +146,7 @@ public class AutenticacionTests(ApiFixture api)
         var manipulado = $"{partes[0]}.{partes[1]}.{new string('A', partes[2].Length)}";
 
         using var cliente = ClienteCon(manipulado);
-        using var respuesta = await cliente.GetAsync(new Uri("/auth/yo", UriKind.Relative));
+        using var respuesta = await cliente.GetAsync(new Uri("/api/auth/yo", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
@@ -164,8 +164,8 @@ public class AutenticacionTests(ApiFixture api)
         using var clienteA = ClienteCon(sesionA.TokenAcceso);
         using var clienteB = ClienteCon(sesionB.TokenAcceso);
 
-        var yoA = await clienteA.GetFromJsonAsync<RespuestaYo>("/auth/yo");
-        var yoB = await clienteB.GetFromJsonAsync<RespuestaYo>("/auth/yo");
+        var yoA = await clienteA.GetFromJsonAsync<RespuestaYo>("/api/auth/yo");
+        var yoB = await clienteB.GetFromJsonAsync<RespuestaYo>("/api/auth/yo");
 
         Assert.NotEqual(yoA!.EmpresaId, yoB!.EmpresaId);
         Assert.NotEqual(yoA.UsuarioId, yoB.UsuarioId);
@@ -178,7 +178,7 @@ public class AutenticacionTests(ApiFixture api)
         var (nitB, _) = await AltaAsync();
 
         using var cliente = api.CreateClient();
-        using var respuesta = await cliente.PostAsJsonAsync("/auth/login", new PeticionLogin(nitB, correoA, Clave));
+        using var respuesta = await cliente.PostAsJsonAsync("/api/auth/login", new PeticionLogin(nitB, correoA, Clave));
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
@@ -198,7 +198,7 @@ public class AutenticacionTests(ApiFixture api)
 
         using var cliente = api.CreateClient();
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/empresas",
+            "/api/empresas",
             new PeticionAlta(nit, "Pyme de Pruebas S.A.S.", correoFinal, "Administradora", Clave));
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
@@ -209,7 +209,7 @@ public class AutenticacionTests(ApiFixture api)
     private async Task<RespuestaSesion> LoginAsync(string nit, string correo, string contrasena)
     {
         using var cliente = api.CreateClient();
-        using var respuesta = await cliente.PostAsJsonAsync("/auth/login", new PeticionLogin(nit, correo, contrasena));
+        using var respuesta = await cliente.PostAsJsonAsync("/api/auth/login", new PeticionLogin(nit, correo, contrasena));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
 

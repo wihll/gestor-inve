@@ -7,7 +7,8 @@ import { join, extname } from "node:path";
 const RAIZ = new URL("../dist/", import.meta.url).pathname;
 const API = process.env.API_URL ?? "http://127.0.0.1:5080";
 const PUERTO = Number(process.env.PORT ?? 4173);
-const RUTAS_API = ["/auth", "/empresas", "/catalogo", "/inventario", "/usuarios"];
+// Un único prefijo: `/catalogo` e `/inventario` son también rutas del SPA (ADR 0008).
+const PREFIJO_API = "/api";
 
 const tipos = {
   ".html": "text/html; charset=utf-8",
@@ -20,7 +21,7 @@ const tipos = {
 createServer(async (peticion, respuesta) => {
   const url = new URL(peticion.url ?? "/", `http://localhost:${PUERTO}`);
 
-  if (RUTAS_API.some((ruta) => url.pathname.startsWith(ruta))) {
+  if (url.pathname === PREFIJO_API || url.pathname.startsWith(`${PREFIJO_API}/`)) {
     const cuerpo =
       peticion.method === "GET" || peticion.method === "HEAD"
         ? undefined

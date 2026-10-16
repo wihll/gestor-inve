@@ -6,12 +6,11 @@ export default defineConfig({
   server: {
     port: 5173,
     // En desarrollo la API va por el mismo origen, así que no hace falta CORS.
+    // Un único prefijo, `/api`: antes se reenviaba `/catalogo` e `/inventario`, que son
+    // también rutas del enrutador del cliente, y recargar la página en una de ellas acababa
+    // en la API, que no las tiene. Ver ADR 0008.
     proxy: {
-      "/auth": "http://127.0.0.1:5080",
-      "/empresas": "http://127.0.0.1:5080",
-      "/catalogo": "http://127.0.0.1:5080",
-      "/inventario": "http://127.0.0.1:5080",
-      "/usuarios": "http://127.0.0.1:5080",
+      "/api": "http://127.0.0.1:5080",
     },
   },
 });
