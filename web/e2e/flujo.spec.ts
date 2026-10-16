@@ -1,19 +1,36 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+/// Localiza una tarjeta por su título y devuelve **solo** su interior.
+///
+/// No es cosmética. Catálogo e Inventario tienen campos con el mismo rótulo («Código»,
+/// «Nombre»), así que un `page.getByLabel("Código")` puede resolverse contra el formulario de
+/// la pantalla **anterior** mientras el enrutador aún no la ha desmontado: se rellena el
+/// campo equivocado, el formulario correcto queda vacío, `required` impide el envío y la
+/// prueba falla más adelante con un «no existe la opción», sin ninguna petición de por medio.
+/// Era exactamente el fallo del runner, que aquí no se reproducía porque la transición es
+/// instantánea. Acotar por tarjeta hace imposible ese cruce.
+function tarjeta(page: Page, titulo: string): Locator {
+  return page
+    .locator("section.tarjeta")
+    .filter({ has: page.getByRole("heading", { name: titulo, exact: true }) });
+}
+
+/// Espera a que la pantalla pedida esté montada antes de tocar sus campos.
+async function irA(page: Page, nombre: string) {
+  await page.getByRole("link", { name: nombre }).click();
+  await expect(page.getByRole("heading", { level: 1, name: nombre })).toBeVisible();
+}
 
 /// `selectOption` solo acepta texto exacto, y las opciones llevan el nombre del producto
 /// detrás del SKU; se busca la opción que lo contiene y se elige por su valor.
-async function seleccionarPorTexto(
-  page: import("@playwright/test").Page,
-  etiqueta: string,
-  contiene: string,
-) {
-  const select = page.getByLabel(etiqueta);
-  const valor = await select
-    .locator("option", { hasText: contiene })
-    .first()
-    .getAttribute("value");
+async function seleccionarPorTexto(ambito: Locator, etiqueta: string, contiene: string) {
+  const select = ambito.getByLabel(etiqueta);
+  const opcion = select.locator("option", { hasText: contiene }).first();
 
-  await select.selectOption(valor);
+  // La opción puede llegar con los datos de una consulta en vuelo: esperarla en vez de leer
+  // un `value` que todavía no existe, que daría `selectOption(null)`.
+  await expect(opcion).toBeAttached();
+  await select.selectOption(await opcion.getAttribute("value"));
 }
 
 /// Datos únicos por ejecución: la base es compartida y el NIT es único por empresa.
@@ -29,7 +46,7 @@ function datosNuevos() {
   };
 }
 
-async function registrarYEntrar(page: import("@playwright/test").Page) {
+async function registrarYEntrar(page: Page) {
   const datos = datosNuevos();
 
   await page.goto("/alta");
@@ -56,56 +73,60 @@ test("una pyme se registra, entra, carga su catálogo y mueve inventario", async
   await registrarYEntrar(page);
 
   // --- Catálogo: unidad y producto
-  await page.getByRole("link", { name: "Catálogo" }).click();
+  await irA(page, "Catálogo");
 
-  await page.getByRole("button", { name: "Crear unidad" }).click();
-  await expect(page.getByRole("option", { name: /UND/ })).toBeAttached();
+  const nuevaUnidad = tarjeta(page, "Nueva unidad de medida");
+  const nuevoProducto = tarjeta(page, "Nuevo producto");
+
+  await nuevaUnidad.getByRole("button", { name: "Crear unidad" }).click();
+  await expect(nuevoProducto.getByRole("option", { name: /UND/ })).toBeAttached();
 
   const sku = `MART-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
-  const nuevoProducto = page.getByRole("form").filter({ hasText: "Nuevo producto" });
-  await page.getByLabel("SKU").fill(sku);
-  await page.getByLabel("Nombre").last().fill("Martillo de uña");
-  await seleccionarPorTexto(page, "Unidad de medida", "UND");
-  await page.getByRole("button", { name: "Crear producto" }).click();
+  await nuevoProducto.getByLabel("SKU").fill(sku);
+  await nuevoProducto.getByLabel("Nombre").fill("Martillo de uña");
+  await seleccionarPorTexto(nuevoProducto, "Unidad de medida", "UND");
+  await nuevoProducto.getByRole("button", { name: "Crear producto" }).click();
 
   // El producto aparece con su variante única, que hereda el SKU.
-  const fila = page.getByRole("row").filter({ hasText: sku });
+  const fila = tarjeta(page, "Productos").getByRole("row").filter({ hasText: sku });
   await expect(fila).toBeVisible();
   await expect(fila.locator('[data-prueba="variantes"]')).toHaveText(sku);
-  expect(nuevoProducto).toBeTruthy();
 
   // --- Inventario: bodega y entrada
-  await page.getByRole("link", { name: "Inventario" }).click();
+  await irA(page, "Inventario");
 
-  await page.getByLabel("Código").fill("PRI");
-  await page.getByLabel("Nombre").first().fill("Principal");
-  await page.getByRole("button", { name: "Crear bodega" }).click();
-  await expect(page.getByRole("option", { name: /PRI/ })).toBeAttached();
+  const nuevaBodega = tarjeta(page, "Nueva bodega");
+  const movimiento = tarjeta(page, "Registrar movimiento");
 
-  await seleccionarPorTexto(page, "Variante", sku);
-  await seleccionarPorTexto(page, "Bodega", "PRI");
-  await page.getByLabel("Cantidad").fill("10");
-  await page.getByLabel("Costo unitario").fill("1000");
-  await page.getByRole("button", { name: "Registrar" }).click();
+  await nuevaBodega.getByLabel("Código").fill("PRI");
+  await nuevaBodega.getByLabel("Nombre").fill("Principal");
+  await nuevaBodega.getByRole("button", { name: "Crear bodega" }).click();
+  await expect(movimiento.getByRole("option", { name: /PRI/ })).toBeAttached();
+
+  await seleccionarPorTexto(movimiento, "Variante", sku);
+  await seleccionarPorTexto(movimiento, "Bodega", "PRI");
+  await movimiento.getByLabel("Cantidad").fill("10");
+  await movimiento.getByLabel("Costo unitario").fill("1000");
+  await movimiento.getByRole("button", { name: "Registrar" }).click();
 
   await expect(page.getByRole("alert")).toContainText("Movimiento registrado");
 
   // Las existencias muestran 10 unidades con su valorización.
-  const existencia = page.getByRole("row").filter({ hasText: sku });
+  const existencia = tarjeta(page, "Existencias").getByRole("row").filter({ hasText: sku });
   await expect(existencia.locator('[data-prueba="cantidad"]')).toHaveText("10 UND");
 
   // --- Una salida deja 7
-  await page.getByLabel("Tipo").selectOption("Salida");
-  await seleccionarPorTexto(page, "Variante", sku);
-  await seleccionarPorTexto(page, "Bodega", "PRI");
-  await page.getByLabel("Cantidad").fill("3");
-  await page.getByRole("button", { name: "Registrar" }).click();
+  await movimiento.getByLabel("Tipo").selectOption("Salida");
+  await seleccionarPorTexto(movimiento, "Variante", sku);
+  await seleccionarPorTexto(movimiento, "Bodega", "PRI");
+  await movimiento.getByLabel("Cantidad").fill("3");
+  await movimiento.getByRole("button", { name: "Registrar" }).click();
 
   await expect(existencia.locator('[data-prueba="cantidad"]')).toHaveText("7 UND");
 
   // --- Kardex: el acumulado del libro tiene que cuadrar con el saldo
-  await page.getByRole("link", { name: "Kardex" }).click();
-  await seleccionarPorTexto(page, "Variante", sku);
+  await irA(page, "Kardex");
+  await seleccionarPorTexto(page.locator("main"), "Variante", sku);
 
   await expect(page.locator('[data-prueba="acumulado"]')).toContainText("7 UND");
   await expect(page.getByRole("row").filter({ hasText: "Entrada" })).toBeVisible();
