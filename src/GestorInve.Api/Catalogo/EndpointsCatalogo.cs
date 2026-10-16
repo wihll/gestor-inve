@@ -148,7 +148,7 @@ public static class EndpointsCatalogo
             await db.SaveChangesAsync(ct);
 
             return Results.Created(
-                $"/catalogo/categorias/{categoria.Id}",
+                $"/api/catalogo/categorias/{categoria.Id}",
                 new RespuestaCategoria(categoria.Id, categoria.Nombre, categoria.PadreId, categoria.Activa));
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
@@ -257,7 +257,7 @@ public static class EndpointsCatalogo
 
             return await GuardarAsync(
                 db,
-                () => Results.Created($"/catalogo/productos/{producto.Id}", Proyectar(producto)),
+                () => Results.Created($"/api/catalogo/productos/{producto.Id}", Proyectar(producto)),
                 ct);
         })
             .RequireAuthorization(Permiso.CatalogoEscribir)
@@ -292,7 +292,7 @@ public static class EndpointsCatalogo
 
                 return await GuardarAsync(
                     db,
-                    () => Results.Created($"/catalogo/variantes/{variante.Id}", Proyectar(variante)),
+                    () => Results.Created($"/api/catalogo/variantes/{variante.Id}", Proyectar(variante)),
                     ct);
             }
             catch (ArgumentException error)

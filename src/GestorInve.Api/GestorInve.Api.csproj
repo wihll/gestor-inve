@@ -18,6 +18,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- La sonda de salud del contenedor es un detalle interno, pero su cálculo de destino
+         merece prueba: si no resolviera el comodín de `ASPNETCORE_URLS`, el HEALTHCHECK
+         apuntaría a una dirección a la que no se puede conectar y el contenedor nunca se
+         declararía sano. -->
+    <InternalsVisibleTo Include="GestorInve.Api.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">

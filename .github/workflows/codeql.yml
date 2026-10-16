@@ -1,0 +1,97 @@
+# Análisis estático de seguridad. Va en su propio workflow y no dentro de `ci.yml` porque la
+# compilación con `security-extended` tarda bastante más que las pruebas, y no tiene sentido
+# retrasar el ciclo de cada push por ella. Semanal además de por PR: las consultas de CodeQL
+# se actualizan, así que un código que pasó hace un mes puede tener un hallazgo nuevo hoy.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "37 5 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+  # `actions: read` no es opcional: sin él, la acción de CodeQL no puede consultar su propia
+  # ejecución y falla con «Resource not accessible by integration», que no dice nada sobre el
+  # código. En un repositorio privado hace falta además GitHub Advanced Security para que el
+  # análisis se pueda subir; sin ella, este workflow seguirá en rojo por política de la cuenta
+  # y no por un hallazgo.
+  actions: read
+
+jobs:
+  disponible:
+    # El análisis se sube a «code scanning», que en un repositorio **privado** solo existe con
+    # GitHub Advanced Security. Sin ella, la acción de CodeQL falla al subir el resultado y deja
+    # el workflow en rojo por una política de la cuenta, no por un hallazgo del código: un rojo
+    # que nadie puede arreglar deja de significar nada y se acaba ignorando.
+    #
+    # Así que primero se pregunta. Si no está disponible, el análisis **no se ejecuta** y queda
+    # un aviso que lo dice: nunca un verde que insinúe que se analizó algo. Se habilita haciendo
+    # público el repositorio (code scanning es gratis en los públicos) o activando Advanced
+    # Security en los ajustes.
+    name: ¿Está habilitado code scanning?
+    runs-on: ubuntu-latest
+    outputs:
+      habilitado: ${{ steps.probar.outputs.habilitado }}
+    steps:
+      - id: probar
+        run: |
+          set -uo pipefail
+          codigo=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/code-scanning/analyses")
+
+          # 403 es exactamente «no está habilitado». Un 404 significa habilitado y todavía sin
+          # análisis, que es el estado normal la primera vez.
+          if [ "$codigo" = "403" ]; then
+            echo "habilitado=false" >> "$GITHUB_OUTPUT"
+            echo "::warning title=CodeQL no se ejecutó::El repositorio no tiene code scanning habilitado, así que **no se analizó nada**. Se habilita haciendo público el repositorio o activando GitHub Advanced Security en los ajustes."
+          else
+            echo "habilitado=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  analizar:
+    name: CodeQL (${{ matrix.lenguaje }})
+    needs: disponible
+    if: needs.disponible.outputs.habilitado == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - lenguaje: csharp
+            modo: manual
+          - lenguaje: javascript-typescript
+            modo: none
+          - lenguaje: actions
+            modo: none
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        if: matrix.lenguaje == 'csharp'
+        with:
+          global-json-file: global.json
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.lenguaje }}
+          build-mode: ${{ matrix.modo }}
+          # `security-extended` añade consultas de menor precisión pero mayor cobertura. En un
+          # sistema que guarda credenciales y datos fiscales, preferimos revisar falsos
+          # positivos a no enterarnos de una inyección.
+          queries: security-extended
+
+      - name: Compilar
+        if: matrix.lenguaje == 'csharp'
+        # Sin `-warnaserror`: aquí interesa que CodeQL vea todo el código, no repetir el
+        # control de calidad que ya hace `ci.yml`.
+        run: dotnet build --configuration Release
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/lenguaje:${{ matrix.lenguaje }}"

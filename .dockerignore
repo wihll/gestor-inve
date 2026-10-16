@@ -1,0 +1,16 @@
+# Todo lo que no entra en el contexto de construcción. No es cosmético: `bin/` y `obj/`
+# del anfitrión traen rutas absolutas y un `project.assets.json` resuelto contra otro SDK,
+# y `restore` dentro de la imagen acabaría mezclando dos grafos de paquetes.
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/TestResults/
+**/test-results/
+**/playwright-report/
+**/*.log
+.git/
+.github/
+.vs/
+brain/
+graphify-out/

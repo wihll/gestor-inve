@@ -28,7 +28,7 @@ public class RefrescoTests(ApiFixture api)
         // El token nuevo sirve para pedir datos.
         using var cliente = api.CreateClient();
         cliente.DefaultRequestHeaders.Authorization = new("Bearer", renovada.TokenAcceso);
-        using var yo = await cliente.GetAsync(new Uri("/auth/yo", UriKind.Relative));
+        using var yo = await cliente.GetAsync(new Uri("/api/auth/yo", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.OK, yo.StatusCode);
     }
@@ -41,7 +41,7 @@ public class RefrescoTests(ApiFixture api)
 
         using var cliente = api.CreateClient();
         using var reintento = await cliente.PostAsJsonAsync(
-            "/auth/refresh",
+            "/api/auth/refresh",
             new PeticionRefresco(sesion.TokenRefresco));
 
         Assert.Equal(HttpStatusCode.Unauthorized, reintento.StatusCode);
@@ -61,13 +61,13 @@ public class RefrescoTests(ApiFixture api)
         using var cliente = api.CreateClient();
 
         using var replay = await cliente.PostAsJsonAsync(
-            "/auth/refresh",
+            "/api/auth/refresh",
             new PeticionRefresco(sesion.TokenRefresco));
         Assert.Equal(HttpStatusCode.Unauthorized, replay.StatusCode);
 
         // El token legítimo también queda inservible: la familia entera fue revocada.
         using var legitimo = await cliente.PostAsJsonAsync(
-            "/auth/refresh",
+            "/api/auth/refresh",
             new PeticionRefresco(renovada.TokenRefresco));
 
         Assert.Equal(HttpStatusCode.Unauthorized, legitimo.StatusCode);
@@ -79,11 +79,11 @@ public class RefrescoTests(ApiFixture api)
         var sesion = await SesionNuevaAsync();
 
         using var cliente = api.CreateClient();
-        using var salida = await cliente.PostAsJsonAsync("/auth/logout", new PeticionRefresco(sesion.TokenRefresco));
+        using var salida = await cliente.PostAsJsonAsync("/api/auth/logout", new PeticionRefresco(sesion.TokenRefresco));
         Assert.Equal(HttpStatusCode.NoContent, salida.StatusCode);
 
         using var reintento = await cliente.PostAsJsonAsync(
-            "/auth/refresh",
+            "/api/auth/refresh",
             new PeticionRefresco(sesion.TokenRefresco));
 
         Assert.Equal(HttpStatusCode.Unauthorized, reintento.StatusCode);
@@ -98,7 +98,7 @@ public class RefrescoTests(ApiFixture api)
     {
         using var cliente = api.CreateClient();
 
-        using var respuesta = await cliente.PostAsJsonAsync("/auth/refresh", new PeticionRefresco(token));
+        using var respuesta = await cliente.PostAsJsonAsync("/api/auth/refresh", new PeticionRefresco(token));
 
         Assert.Equal(HttpStatusCode.Unauthorized, respuesta.StatusCode);
     }
@@ -130,11 +130,11 @@ public class RefrescoTests(ApiFixture api)
 
         using var cliente = api.CreateClient();
         using var alta = await cliente.PostAsJsonAsync(
-            "/empresas",
+            "/api/empresas",
             new PeticionAlta(nit, "Pyme de Pruebas S.A.S.", correo, "Administradora", Clave));
         Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
 
-        using var login = await cliente.PostAsJsonAsync("/auth/login", new PeticionLogin(nit, correo, Clave));
+        using var login = await cliente.PostAsJsonAsync("/api/auth/login", new PeticionLogin(nit, correo, Clave));
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
 
         return (await login.Content.ReadFromJsonAsync<RespuestaSesion>())!;
@@ -143,7 +143,7 @@ public class RefrescoTests(ApiFixture api)
     private async Task<RespuestaSesion> RefrescarAsync(string tokenRefresco)
     {
         using var cliente = api.CreateClient();
-        using var respuesta = await cliente.PostAsJsonAsync("/auth/refresh", new PeticionRefresco(tokenRefresco));
+        using var respuesta = await cliente.PostAsJsonAsync("/api/auth/refresh", new PeticionRefresco(tokenRefresco));
 
         Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
 

@@ -95,7 +95,7 @@ public class InventarioTests(ApiFixture api)
         var soloMover = await ClienteSinAjustarAsync(nit, correo);
 
         using var respuesta = await soloMover.PostAsJsonAsync(
-            "/inventario/movimientos",
+            "/api/inventario/movimientos",
             Peticion(escenario, TipoMovimiento.Salida, 5m, null));
 
         Assert.Equal(HttpStatusCode.Conflict, respuesta.StatusCode);
@@ -129,7 +129,7 @@ public class InventarioTests(ApiFixture api)
         var salidas = Enumerable.Range(0, 10).Select(async _ =>
         {
             using var respuesta = await cliente.PostAsJsonAsync(
-                "/inventario/movimientos",
+                "/api/inventario/movimientos",
                 Peticion(escenario, TipoMovimiento.Salida, 5m, null));
 
             return respuesta.StatusCode;
@@ -160,7 +160,7 @@ public class InventarioTests(ApiFixture api)
         var salida = await MoverAsync(cliente, escenario, TipoMovimiento.Salida, 30m, null);
 
         using var traslado = await cliente.PostAsJsonAsync(
-            "/inventario/traslados",
+            "/api/inventario/traslados",
             new PeticionTraslado(
                 escenario.VarianteId,
                 escenario.BodegaId,
@@ -174,13 +174,13 @@ public class InventarioTests(ApiFixture api)
         Assert.Equal(HttpStatusCode.Created, traslado.StatusCode);
 
         using var reversa = await cliente.PostAsJsonAsync(
-            $"/inventario/movimientos/{salida.Id}/reversa",
+            $"/api/inventario/movimientos/{salida.Id}/reversa",
             new PeticionReversa("corrección"));
         Assert.Equal(HttpStatusCode.Created, reversa.StatusCode);
 
         var kardex = await KardexAsync(cliente, escenario.VarianteId);
         var existencias = await cliente.GetFromJsonAsync<List<RespuestaExistencia>>(
-            $"/inventario/existencias?varianteId={escenario.VarianteId}");
+            $"/api/inventario/existencias?varianteId={escenario.VarianteId}");
 
         // 100 + 50 - 30 - 20 (traslado) + 30 (reversa) = 130 en origen, 20 en destino.
         Assert.NotNull(existencias);
@@ -200,7 +200,7 @@ public class InventarioTests(ApiFixture api)
         await MoverAsync(cliente, escenario, TipoMovimiento.Entrada, 10m, 1500m);
 
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/inventario/traslados",
+            "/api/inventario/traslados",
             new PeticionTraslado(escenario.VarianteId, escenario.BodegaId, null, destino.Id, null, 4m, null, null, null));
 
         var movimientos = (await respuesta.Content.ReadFromJsonAsync<List<RespuestaMovimiento>>(ApiFixture.Json))!;
@@ -210,7 +210,7 @@ public class InventarioTests(ApiFixture api)
         Assert.Equal(movimientos[0].TrasladoId, movimientos[1].TrasladoId);
 
         var existencias = await cliente.GetFromJsonAsync<List<RespuestaExistencia>>(
-            $"/inventario/existencias?varianteId={escenario.VarianteId}");
+            $"/api/inventario/existencias?varianteId={escenario.VarianteId}");
 
         Assert.NotNull(existencias);
         Assert.Equal(1500m, existencias.Single(e => e.BodegaId == destino.Id).CostoPromedio);
@@ -226,7 +226,7 @@ public class InventarioTests(ApiFixture api)
         var salida = await MoverAsync(cliente, escenario, TipoMovimiento.Salida, 4m, null);
 
         using var respuesta = await cliente.PostAsJsonAsync(
-            $"/inventario/movimientos/{salida.Id}/reversa",
+            $"/api/inventario/movimientos/{salida.Id}/reversa",
             new PeticionReversa(null));
 
         var reversa = (await respuesta.Content.ReadFromJsonAsync<RespuestaMovimiento>(ApiFixture.Json))!;
@@ -253,10 +253,10 @@ public class InventarioTests(ApiFixture api)
         var salida = await MoverAsync(cliente, escenario, TipoMovimiento.Salida, 4m, null);
 
         using var primera = await cliente.PostAsJsonAsync(
-            $"/inventario/movimientos/{salida.Id}/reversa",
+            $"/api/inventario/movimientos/{salida.Id}/reversa",
             new PeticionReversa(null));
         using var segunda = await cliente.PostAsJsonAsync(
-            $"/inventario/movimientos/{salida.Id}/reversa",
+            $"/api/inventario/movimientos/{salida.Id}/reversa",
             new PeticionReversa(null));
 
         Assert.Equal(HttpStatusCode.Created, primera.StatusCode);
@@ -270,7 +270,7 @@ public class InventarioTests(ApiFixture api)
         var escenario = await EscenarioAsync(cliente, exigeLote: true);
 
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/inventario/movimientos",
+            "/api/inventario/movimientos",
             Peticion(escenario, TipoMovimiento.Entrada, 10m, 1000m));
 
         Assert.Equal(HttpStatusCode.NotImplemented, respuesta.StatusCode);
@@ -283,7 +283,7 @@ public class InventarioTests(ApiFixture api)
         var escenario = await EscenarioAsync(cliente);
 
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/inventario/movimientos",
+            "/api/inventario/movimientos",
             Peticion(escenario, TipoMovimiento.Entrada, 10m, null));
 
         Assert.Equal(HttpStatusCode.BadRequest, respuesta.StatusCode);
@@ -300,10 +300,10 @@ public class InventarioTests(ApiFixture api)
 
         // A no ve el movimiento, ni puede reversarlo, ni ve las existencias de B.
         using var reversa = await clienteA.PostAsJsonAsync(
-            $"/inventario/movimientos/{movimientoB.Id}/reversa",
+            $"/api/inventario/movimientos/{movimientoB.Id}/reversa",
             new PeticionReversa(null));
         var kardexDeA = await KardexAsync(clienteA, escenarioB.VarianteId);
-        var existenciasDeA = await clienteA.GetFromJsonAsync<List<RespuestaExistencia>>("/inventario/existencias");
+        var existenciasDeA = await clienteA.GetFromJsonAsync<List<RespuestaExistencia>>("/api/inventario/existencias");
 
         Assert.Equal(HttpStatusCode.NotFound, reversa.StatusCode);
         Assert.Empty(kardexDeA);
@@ -321,10 +321,10 @@ public class InventarioTests(ApiFixture api)
         var soloMover = await ClienteSinAjustarAsync(nit, correo);
 
         using var ajuste = await soloMover.PostAsJsonAsync(
-            "/inventario/movimientos",
+            "/api/inventario/movimientos",
             Peticion(escenario, TipoMovimiento.AjustePositivo, 1m, 100m));
         using var reversa = await soloMover.PostAsJsonAsync(
-            $"/inventario/movimientos/{entrada.Id}/reversa",
+            $"/api/inventario/movimientos/{entrada.Id}/reversa",
             new PeticionReversa(null));
 
         Assert.Equal(HttpStatusCode.Forbidden, ajuste.StatusCode);
@@ -344,7 +344,7 @@ public class InventarioTests(ApiFixture api)
         var movimiento = await MoverAsync(cliente, escenario, TipoMovimiento.Entrada, 10m, 1000m);
 
         // La empresa sale del propio token: con RLS, sin ponerla en la sesión no se ve la fila.
-        var yo = await cliente.GetFromJsonAsync<RespuestaYo>("/auth/yo");
+        var yo = await cliente.GetFromJsonAsync<RespuestaYo>("/api/auth/yo");
 
         await using var conexion = new Npgsql.NpgsqlConnection(ApiFixture.CadenaConexion);
         await conexion.OpenAsync();
@@ -390,7 +390,7 @@ public class InventarioTests(ApiFixture api)
 
         using var cliente = api.CreateClient();
         using var alta = await cliente.PostAsJsonAsync(
-            "/empresas",
+            "/api/empresas",
             new PeticionAlta(nit, "Pyme de Pruebas S.A.S.", correo, "Administradora", Clave));
 
         Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
@@ -401,7 +401,7 @@ public class InventarioTests(ApiFixture api)
     private async Task<HttpClient> ClienteAutenticadoAsync(string nit, string correo)
     {
         using var anonimo = api.CreateClient();
-        using var login = await anonimo.PostAsJsonAsync("/auth/login", new PeticionLogin(nit, correo, Clave));
+        using var login = await anonimo.PostAsJsonAsync("/api/auth/login", new PeticionLogin(nit, correo, Clave));
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
 
         var sesion = (await login.Content.ReadFromJsonAsync<RespuestaSesion>())!;
@@ -422,7 +422,7 @@ public class InventarioTests(ApiFixture api)
     private async Task<HttpClient> ClienteSinAjustarAsync(string nit, string correo)
     {
         using var anonimo = api.CreateClient();
-        using var login = await anonimo.PostAsJsonAsync("/auth/login", new PeticionLogin(nit, correo, Clave));
+        using var login = await anonimo.PostAsJsonAsync("/api/auth/login", new PeticionLogin(nit, correo, Clave));
         var sesion = (await login.Content.ReadFromJsonAsync<RespuestaSesion>())!;
 
         var cliente = api.CreateClient();
@@ -435,7 +435,7 @@ public class InventarioTests(ApiFixture api)
 
     private static async Task<RespuestaBodega> CrearBodegaAsync(HttpClient cliente, string codigo, string nombre)
     {
-        using var respuesta = await cliente.PostAsJsonAsync("/inventario/bodegas", new PeticionBodega(codigo, nombre));
+        using var respuesta = await cliente.PostAsJsonAsync("/api/inventario/bodegas", new PeticionBodega(codigo, nombre));
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
 
@@ -446,13 +446,13 @@ public class InventarioTests(ApiFixture api)
     private static async Task<Escenario> EscenarioAsync(HttpClient cliente, bool exigeLote = false)
     {
         using var unidadRespuesta = await cliente.PostAsJsonAsync(
-            "/catalogo/unidades",
+            "/api/catalogo/unidades",
             new PeticionUnidad("UND", "Unidad", 0));
         Assert.Equal(HttpStatusCode.Created, unidadRespuesta.StatusCode);
         var unidad = (await unidadRespuesta.Content.ReadFromJsonAsync<RespuestaUnidad>())!;
 
         using var productoRespuesta = await cliente.PostAsJsonAsync(
-            "/catalogo/productos",
+            "/api/catalogo/productos",
             new PeticionProducto($"SKU-{Guid.NewGuid():N}"[..12], "Artículo", unidad.Id, null, null, null, exigeLote, false));
         Assert.Equal(HttpStatusCode.Created, productoRespuesta.StatusCode);
         var producto = (await productoRespuesta.Content.ReadFromJsonAsync<RespuestaProducto>())!;
@@ -470,7 +470,7 @@ public class InventarioTests(ApiFixture api)
         decimal? costo)
     {
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/inventario/movimientos",
+            "/api/inventario/movimientos",
             Peticion(escenario, tipo, cantidad, costo));
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
@@ -481,11 +481,11 @@ public class InventarioTests(ApiFixture api)
     private static async Task<RespuestaExistencia> ExistenciaAsync(HttpClient cliente, Escenario escenario)
     {
         var existencias = await cliente.GetFromJsonAsync<List<RespuestaExistencia>>(
-            $"/inventario/existencias?varianteId={escenario.VarianteId}&bodegaId={escenario.BodegaId}");
+            $"/api/inventario/existencias?varianteId={escenario.VarianteId}&bodegaId={escenario.BodegaId}");
 
         return existencias!.Single();
     }
 
     private static async Task<List<RespuestaMovimiento>> KardexAsync(HttpClient cliente, Guid varianteId) =>
-        (await cliente.GetFromJsonAsync<List<RespuestaMovimiento>>($"/inventario/kardex?varianteId={varianteId}", ApiFixture.Json))!;
+        (await cliente.GetFromJsonAsync<List<RespuestaMovimiento>>($"/api/inventario/kardex?varianteId={varianteId}", ApiFixture.Json))!;
 }

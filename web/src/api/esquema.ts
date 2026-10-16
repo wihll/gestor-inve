@@ -4,92 +4,7 @@
  */
 
 export interface paths {
-    "/empresas": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Registra una empresa con su primer administrador. */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["PeticionAlta"];
-                };
-            };
-            responses: {
-                /** @description Created */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RespuestaAlta"];
-                    };
-                };
-                /** @description Conflict */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/usuarios": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Listado de usuarios (requiere el permiso usuarios:leer). */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path?: never;
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["RespuestaUsuarioActual"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/auth/login": {
+    "/api/auth/login": {
         parameters: {
             query?: never;
             header?: never;
@@ -147,7 +62,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/refresh": {
+    "/api/auth/refresh": {
         parameters: {
             query?: never;
             header?: never;
@@ -196,7 +111,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/logout": {
+    "/api/auth/logout": {
         parameters: {
             query?: never;
             header?: never;
@@ -234,7 +149,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/yo": {
+    "/api/auth/yo": {
         parameters: {
             query?: never;
             header?: never;
@@ -270,7 +185,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/unidades": {
+    "/api/empresas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Registra una empresa con su primer administrador. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PeticionAlta"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RespuestaAlta"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/usuarios": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listado de usuarios (requiere el permiso usuarios:leer). */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RespuestaUsuarioActual"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/catalogo/unidades": {
         parameters: {
             query?: never;
             header?: never;
@@ -339,7 +339,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/categorias": {
+    "/api/catalogo/categorias": {
         parameters: {
             query?: never;
             header?: never;
@@ -408,7 +408,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/categorias/{id}/padre": {
+    "/api/catalogo/categorias/{id}/padre": {
         parameters: {
             query?: never;
             header?: never;
@@ -457,7 +457,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/productos": {
+    "/api/catalogo/productos": {
         parameters: {
             query?: never;
             header?: never;
@@ -535,7 +535,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/productos/{id}": {
+    "/api/catalogo/productos/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -582,7 +582,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/productos/{id}/variantes": {
+    "/api/catalogo/productos/{id}/variantes": {
         parameters: {
             query?: never;
             header?: never;
@@ -642,7 +642,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/variantes/{id}/codigos": {
+    "/api/catalogo/variantes/{id}/codigos": {
         parameters: {
             query?: never;
             header?: never;
@@ -693,7 +693,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/variantes/{id}/limites": {
+    "/api/catalogo/variantes/{id}/limites": {
         parameters: {
             query?: never;
             header?: never;
@@ -742,7 +742,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/catalogo/codigos/{codigo}": {
+    "/api/catalogo/codigos/{codigo}": {
         parameters: {
             query?: never;
             header?: never;
@@ -789,7 +789,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/inventario/bodegas": {
+    "/api/inventario/bodegas": {
         parameters: {
             query?: never;
             header?: never;
@@ -858,7 +858,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/inventario/bodegas/{id}/ubicaciones": {
+    "/api/inventario/bodegas/{id}/ubicaciones": {
         parameters: {
             query?: never;
             header?: never;
@@ -918,7 +918,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/inventario/movimientos": {
+    "/api/inventario/movimientos": {
         parameters: {
             query?: never;
             header?: never;
@@ -1003,7 +1003,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/inventario/traslados": {
+    "/api/inventario/traslados": {
         parameters: {
             query?: never;
             header?: never;
@@ -1061,7 +1061,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/inventario/movimientos/{id}/reversa": {
+    "/api/inventario/movimientos/{id}/reversa": {
         parameters: {
             query?: never;
             header?: never;
@@ -1121,7 +1121,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/inventario/existencias": {
+    "/api/inventario/existencias": {
         parameters: {
             query?: never;
             header?: never;
@@ -1160,7 +1160,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/inventario/kardex": {
+    "/api/inventario/kardex": {
         parameters: {
             query?: never;
             header?: never;

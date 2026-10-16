@@ -23,7 +23,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
 
   const cargarUsuario = useCallback(async () => {
     try {
-      setUsuario(await cliente.get<RespuestaYo>("/auth/yo"));
+      setUsuario(await cliente.get<RespuestaYo>("/api/auth/yo"));
     } catch {
       setUsuario(null);
     }

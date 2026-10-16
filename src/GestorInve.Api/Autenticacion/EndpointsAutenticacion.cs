@@ -110,7 +110,7 @@ public static class EndpointsAutenticacion
                 cancelacion);
 
             return resultado.Exitoso
-                ? Results.Created($"/empresas/{resultado.EmpresaId}", new RespuestaAlta(resultado.EmpresaId))
+                ? Results.Created($"/api/empresas/{resultado.EmpresaId}", new RespuestaAlta(resultado.EmpresaId))
                 : Results.Problem(detail: resultado.Error, statusCode: StatusCodes.Status409Conflict);
         })
         .AllowAnonymous()

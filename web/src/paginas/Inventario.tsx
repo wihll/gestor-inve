@@ -19,29 +19,29 @@ export function Inventario() {
 
   const bodegas = useQuery({
     queryKey: ["bodegas"],
-    queryFn: () => cliente.get<RespuestaBodega[]>("/inventario/bodegas"),
+    queryFn: () => cliente.get<RespuestaBodega[]>("/api/inventario/bodegas"),
   });
 
   const productos = useQuery({
     queryKey: ["productos"],
-    queryFn: () => cliente.get<RespuestaProducto[]>("/catalogo/productos"),
+    queryFn: () => cliente.get<RespuestaProducto[]>("/api/catalogo/productos"),
   });
 
   const existencias = useQuery({
     queryKey: ["existencias"],
-    queryFn: () => cliente.get<RespuestaExistencia[]>("/inventario/existencias"),
+    queryFn: () => cliente.get<RespuestaExistencia[]>("/api/inventario/existencias"),
   });
 
   const crearBodega = useMutation({
     mutationFn: (datos: { codigo: string; nombre: string }) =>
-      cliente.post<RespuestaBodega>("/inventario/bodegas", datos),
+      cliente.post<RespuestaBodega>("/api/inventario/bodegas", datos),
     onSuccess: () => void cola.invalidateQueries({ queryKey: ["bodegas"] }),
     onError: (fallo: Error) => setError(fallo.message),
   });
 
   const mover = useMutation({
     mutationFn: (datos: Record<string, unknown>) =>
-      cliente.post<RespuestaMovimiento>("/inventario/movimientos", datos),
+      cliente.post<RespuestaMovimiento>("/api/inventario/movimientos", datos),
     onSuccess: (movimiento) => {
       setAviso(
         movimiento.forzadoNegativo === true

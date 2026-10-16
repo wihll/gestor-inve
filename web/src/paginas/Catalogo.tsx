@@ -16,26 +16,26 @@ export function Catalogo() {
 
   const unidades = useQuery({
     queryKey: ["unidades"],
-    queryFn: () => cliente.get<RespuestaUnidad[]>("/catalogo/unidades"),
+    queryFn: () => cliente.get<RespuestaUnidad[]>("/api/catalogo/unidades"),
   });
 
   const productos = useQuery({
     queryKey: ["productos"],
-    queryFn: () => cliente.get<RespuestaProducto[]>("/catalogo/productos"),
+    queryFn: () => cliente.get<RespuestaProducto[]>("/api/catalogo/productos"),
   });
 
   const [error, setError] = useState<string | null>(null);
 
   const crearUnidad = useMutation({
     mutationFn: (datos: { codigo: string; nombre: string; decimales: number }) =>
-      cliente.post<RespuestaUnidad>("/catalogo/unidades", datos),
+      cliente.post<RespuestaUnidad>("/api/catalogo/unidades", datos),
     onSuccess: () => void cola.invalidateQueries({ queryKey: ["unidades"] }),
     onError: (fallo: Error) => setError(fallo.message),
   });
 
   const crearProducto = useMutation({
     mutationFn: (datos: PeticionProducto) =>
-      cliente.post<RespuestaProducto>("/catalogo/productos", datos),
+      cliente.post<RespuestaProducto>("/api/catalogo/productos", datos),
     onSuccess: () => void cola.invalidateQueries({ queryKey: ["productos"] }),
     onError: (fallo: Error) => setError(fallo.message),
   });

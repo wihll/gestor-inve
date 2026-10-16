@@ -21,17 +21,17 @@ export type TipoMovimiento = components["schemas"]["TipoMovimiento"];
 
 /// Comprobación en tiempo de compilación de que las rutas que usamos existen en el contrato.
 type RutasUsadas =
-  | "/auth/login"
-  | "/auth/refresh"
-  | "/auth/logout"
-  | "/auth/yo"
-  | "/empresas"
-  | "/catalogo/unidades"
-  | "/catalogo/productos"
-  | "/inventario/bodegas"
-  | "/inventario/movimientos"
-  | "/inventario/existencias"
-  | "/inventario/kardex";
+  | "/api/auth/login"
+  | "/api/auth/refresh"
+  | "/api/auth/logout"
+  | "/api/auth/yo"
+  | "/api/empresas"
+  | "/api/catalogo/unidades"
+  | "/api/catalogo/productos"
+  | "/api/inventario/bodegas"
+  | "/api/inventario/movimientos"
+  | "/api/inventario/existencias"
+  | "/api/inventario/kardex";
 
 type Verifica<T extends keyof paths> = T;
 export type RutasVerificadas = Verifica<RutasUsadas>;
@@ -107,7 +107,7 @@ export class ClienteApi {
   }
 
   async entrar(credenciales: PeticionLogin): Promise<RespuestaSesion> {
-    const sesion = await this.pedir<RespuestaSesion>("POST", "/auth/login", credenciales, false);
+    const sesion = await this.pedir<RespuestaSesion>("POST", "/api/auth/login", credenciales, false);
     this.fijarTokens(sesion as Tokens);
 
     return sesion;
@@ -118,7 +118,7 @@ export class ClienteApi {
 
     if (refresco !== null) {
       // El cierre revoca la cadena en el servidor; si falla, igual se limpia aquí.
-      await this.pedir("POST", "/auth/logout", { tokenRefresco: refresco }, false).catch(() => undefined);
+      await this.pedir("POST", "/api/auth/logout", { tokenRefresco: refresco }, false).catch(() => undefined);
     }
 
     this.fijarTokens(null);
@@ -160,7 +160,7 @@ export class ClienteApi {
     try {
       const sesion = await this.pedir<RespuestaSesion>(
         "POST",
-        "/auth/refresh",
+        "/api/auth/refresh",
         { tokenRefresco: refresco },
         false,
       );

@@ -158,6 +158,22 @@ test("una contraseña equivocada muestra el mensaje del servidor y no entra", as
   await expect(page).toHaveURL(/\/entrar/);
 });
 
+/// Esta prueba **no existía** y por eso el defecto llegó hasta el job de despliegue de H4: las
+/// demás navegan con el enrutador del cliente, que no pide la ruta al servidor. Abrir
+/// `/inventario` de verdad —un favorito, un enlace compartido, una recarga— sí la pide, y el
+/// servidor la reenviaba a la Api, que no tiene esa ruta. Ver ADR 0008.
+test("abrir una ruta del SPA directamente la sirve el servidor, no la Api", async ({ page }) => {
+  const datos = await registrarYEntrar(page);
+
+  for (const ruta of ["/inventario", "/catalogo", "/kardex"]) {
+    const respuesta = await page.goto(ruta);
+
+    expect(respuesta?.status(), `${ruta} debe servir el SPA`).toBe(200);
+    expect(respuesta?.headers()["content-type"]).toContain("text/html");
+    await expect(page.getByRole("button", { name: new RegExp(datos.correo) })).toBeVisible();
+  }
+});
+
 test("la sesión sobrevive a recargar la página", async ({ page }) => {
   const datos = await registrarYEntrar(page);
 

@@ -12,6 +12,16 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
+// `--comprobar-salud` existe por el contenedor: la imagen de runtime de ASP.NET no trae
+// `curl` ni `wget`, así que el `HEALTHCHECK` de Docker no tiene con qué consultar `/ready`.
+// Antes que instalar un paquete entero en la imagen final, el propio ejecutable sabe
+// preguntarle a la instancia que ya está escuchando y traducir la respuesta a un código de
+// salida. No arranca el host: solo hace una petición y termina.
+if (args.Contains("--comprobar-salud", StringComparer.Ordinal))
+{
+    return await Sonda.ComprobarAsync();
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Los enum viajan como texto («Entrada»), no como número. Un entero en el contrato es
@@ -135,13 +145,26 @@ if (conPersistencia)
 {
     app.UseAuthentication();
     app.UseAuthorization();
-    app.MapEndpointsAutenticacion();
-    app.MapEndpointsEmpresa();
-    app.MapEndpointsCatalogo();
-    app.MapEndpointsInventario();
+
+    // **Todo** lo de la Api vive bajo `/api`. No es cosmético: la web y la Api se sirven en el
+    // mismo origen (ADR 0008) y, sin este prefijo, `/inventario` es a la vez una ruta del
+    // enrutador del cliente y el prefijo de un grupo de la Api. El proxy la reenviaba a la Api,
+    // que no tiene esa ruta, así que abrir `http://servidor/inventario` —un favorito, un enlace
+    // compartido, una recarga— devolvía 404. Lo destapó el job de despliegue de H4.
+    //
+    // `/health` y `/ready` se quedan fuera a propósito: son del proceso, no de la Api, y los
+    // consulta el contenedor, no el navegador.
+    var api = app.MapGroup("/api");
+
+    api.MapEndpointsAutenticacion();
+    api.MapEndpointsEmpresa();
+    api.MapEndpointsCatalogo();
+    api.MapEndpointsInventario();
 }
 
 await app.RunAsync();
+
+return 0;
 
 /// <summary>Expuesta para las pruebas de integración con WebApplicationFactory.</summary>
 public partial class Program;

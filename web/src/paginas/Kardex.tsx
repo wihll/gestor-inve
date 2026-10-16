@@ -19,12 +19,12 @@ export function Kardex() {
 
   const productos = useQuery({
     queryKey: ["productos"],
-    queryFn: () => cliente.get<RespuestaProducto[]>("/catalogo/productos"),
+    queryFn: () => cliente.get<RespuestaProducto[]>("/api/catalogo/productos"),
   });
 
   const movimientos = useQuery({
     queryKey: ["kardex", varianteId],
-    queryFn: () => cliente.get<RespuestaMovimiento[]>(`/inventario/kardex?varianteId=${varianteId}`),
+    queryFn: () => cliente.get<RespuestaMovimiento[]>(`/api/inventario/kardex?varianteId=${varianteId}`),
     enabled: varianteId !== "",
   });
 

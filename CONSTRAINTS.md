@@ -28,3 +28,9 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Sesión en la web | Un solo refresco en vuelo; tres 401 simultáneos no pueden provocar más de un refresco | `tests/cliente.test.ts` |
 | Flujo de usuario | Registro, entrada, salida y kardex cuadrado, en navegador real contra la Api | Job `e2e` del CI |
 | Código generado | Las migraciones de EF se marcan `generated_code`; no cuenta como supresión | `.editorconfig` + ADR 0003 |
+| Un solo camino de actualización | El esquema se aplica con `GESTORINVE_MIGRAR=true`; nunca por omisión. Lo usan el CI, el contenedor y el instalador | Job `compose` del CI (cuenta las tablas) + ADR 0008 |
+| Rol de la base en la instalación | `scripts/init-db.sh` crea el rol sin `SUPERUSER` ni `BYPASSRLS` y **aborta** si quedó privilegiado | El propio script + job `compose` |
+| Secretos sin valor por omisión | El compose falla si faltan `POSTGRES_CLAVE`, `GESTORINVE_CLAVE_BD` o `JWT_CLAVE` | Job `compose` (comprobación invertida: sin `.env` debe fallar) |
+| Rutas del SPA y de la Api | La Api vive bajo `/api`; abrir una ruta del enrutador del cliente directamente la sirve el servidor web, no la Api | Prueba e2e «ruta del SPA» + job `compose` |
+| Despliegue ejecutable | El `docker-compose.yml` se construye y se levanta en cada PR; la web y la Api responden en el mismo origen | Job `compose` del CI |
+| Análisis de seguridad | CodeQL con `security-extended` sobre C#, TypeScript y los propios workflows | `codeql.yml`, semanal y por PR |

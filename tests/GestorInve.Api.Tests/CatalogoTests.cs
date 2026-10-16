@@ -47,12 +47,12 @@ public class CatalogoTests(ApiFixture api)
         Assert.Empty(producto.Variantes);
 
         using var respuesta = await cliente.PostAsJsonAsync(
-            $"/catalogo/productos/{producto.Id}/variantes",
+            $"/api/catalogo/productos/{producto.Id}/variantes",
             new PeticionVariante("CAM-POLO-M-ROJO", new() { ["talla"] = "M", ["color"] = "rojo" }));
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
 
-        var leido = await cliente.GetFromJsonAsync<RespuestaProducto>($"/catalogo/productos/{producto.Id}");
+        var leido = await cliente.GetFromJsonAsync<RespuestaProducto>($"/api/catalogo/productos/{producto.Id}");
         var variante = Assert.Single(leido!.Variantes);
         Assert.Equal("M", variante.Atributos["talla"]);
     }
@@ -70,11 +70,11 @@ public class CatalogoTests(ApiFixture api)
         var unidadB = await CrearUnidadAsync(clienteB, "UND", 0);
         var productoB = await CrearProductoAsync(clienteB, "SECRETO-B", "Producto de B", unidadB.Id);
 
-        using var porId = await clienteA.GetAsync(new Uri($"/catalogo/productos/{productoB.Id}", UriKind.Relative));
+        using var porId = await clienteA.GetAsync(new Uri($"/api/catalogo/productos/{productoB.Id}", UriKind.Relative));
         Assert.Equal(HttpStatusCode.NotFound, porId.StatusCode);
 
         // Tampoco debe aparecer en el listado de A.
-        var listaDeA = await clienteA.GetFromJsonAsync<List<RespuestaProducto>>("/catalogo/productos");
+        var listaDeA = await clienteA.GetFromJsonAsync<List<RespuestaProducto>>("/api/catalogo/productos");
         Assert.DoesNotContain(listaDeA!, p => p.Id == productoB.Id);
         Assert.DoesNotContain(listaDeA!, p => p.Sku == "SECRETO-B");
     }
@@ -90,13 +90,13 @@ public class CatalogoTests(ApiFixture api)
         var varianteB = productoB.Variantes.Single();
 
         using var limites = await clienteA.PutAsJsonAsync(
-            $"/catalogo/variantes/{varianteB.Id}/limites",
+            $"/api/catalogo/variantes/{varianteB.Id}/limites",
             new PeticionLimites(1m, 10m));
         using var codigo = await clienteA.PostAsJsonAsync(
-            $"/catalogo/variantes/{varianteB.Id}/codigos",
+            $"/api/catalogo/variantes/{varianteB.Id}/codigos",
             new PeticionCodigo("7702001234567"));
         using var variante = await clienteA.PostAsJsonAsync(
-            $"/catalogo/productos/{productoB.Id}/variantes",
+            $"/api/catalogo/productos/{productoB.Id}/variantes",
             new PeticionVariante("INTRUSA", []));
 
         Assert.Equal(HttpStatusCode.NotFound, limites.StatusCode);
@@ -115,13 +115,13 @@ public class CatalogoTests(ApiFixture api)
         var codigo = $"77{Random.Shared.NextInt64(1_000_000_000, 9_999_999_999)}";
 
         using var alta = await clienteB.PostAsJsonAsync(
-            $"/catalogo/variantes/{productoB.Variantes.Single().Id}/codigos",
+            $"/api/catalogo/variantes/{productoB.Variantes.Single().Id}/codigos",
             new PeticionCodigo(codigo));
         Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
 
         // B lo resuelve; A no, aunque conozca el código exacto.
-        using var desdeB = await clienteB.GetAsync(new Uri($"/catalogo/codigos/{codigo}", UriKind.Relative));
-        using var desdeA = await clienteA.GetAsync(new Uri($"/catalogo/codigos/{codigo}", UriKind.Relative));
+        using var desdeB = await clienteB.GetAsync(new Uri($"/api/catalogo/codigos/{codigo}", UriKind.Relative));
+        using var desdeA = await clienteA.GetAsync(new Uri($"/api/catalogo/codigos/{codigo}", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.OK, desdeB.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, desdeA.StatusCode);
@@ -153,7 +153,7 @@ public class CatalogoTests(ApiFixture api)
         await CrearProductoAsync(cliente, "UNICO", "Primero", unidad.Id);
 
         using var repetido = await cliente.PostAsJsonAsync(
-            "/catalogo/productos",
+            "/api/catalogo/productos",
             new PeticionProducto("UNICO", "Segundo", unidad.Id, null, null, null, false, false));
 
         Assert.Equal(HttpStatusCode.Conflict, repetido.StatusCode);
@@ -166,7 +166,7 @@ public class CatalogoTests(ApiFixture api)
         var sinPermisos = await ClienteConPermisosAsync(nit, correo);
 
         using var respuesta = await sinPermisos.PostAsJsonAsync(
-            "/catalogo/unidades",
+            "/api/catalogo/unidades",
             new PeticionUnidad("UND", "Unidad", 0));
 
         Assert.Equal(HttpStatusCode.Forbidden, respuesta.StatusCode);
@@ -177,7 +177,7 @@ public class CatalogoTests(ApiFixture api)
     {
         using var anonimo = api.CreateClient();
 
-        using var listado = await anonimo.GetAsync(new Uri("/catalogo/productos", UriKind.Relative));
+        using var listado = await anonimo.GetAsync(new Uri("/api/catalogo/productos", UriKind.Relative));
 
         Assert.Equal(HttpStatusCode.Unauthorized, listado.StatusCode);
     }
@@ -193,7 +193,7 @@ public class CatalogoTests(ApiFixture api)
         Assert.Equal(0, piezas.Decimales);
         Assert.Equal(3, kilos.Decimales);
 
-        var unidades = await cliente.GetFromJsonAsync<List<RespuestaUnidad>>("/catalogo/unidades");
+        var unidades = await cliente.GetFromJsonAsync<List<RespuestaUnidad>>("/api/catalogo/unidades");
         Assert.Equal(2, unidades!.Count);
     }
 
@@ -210,7 +210,7 @@ public class CatalogoTests(ApiFixture api)
 
         // Colgar la abuela de su nieta cerraría el árbol en bucle.
         using var ciclo = await cliente.PutAsJsonAsync(
-            $"/catalogo/categorias/{abuela.Id}/padre",
+            $"/api/catalogo/categorias/{abuela.Id}/padre",
             new PeticionCategoria("Aseo", nieta.Id));
 
         Assert.Equal(HttpStatusCode.Conflict, ciclo.StatusCode);
@@ -224,10 +224,10 @@ public class CatalogoTests(ApiFixture api)
         var producto = await CrearProductoAsync(cliente, "CAM", "Camiseta", unidad.Id, ["talla"]);
 
         using var primera = await cliente.PostAsJsonAsync(
-            $"/catalogo/productos/{producto.Id}/variantes",
+            $"/api/catalogo/productos/{producto.Id}/variantes",
             new PeticionVariante("CAM-M", new() { ["talla"] = "M" }));
         using var repetida = await cliente.PostAsJsonAsync(
-            $"/catalogo/productos/{producto.Id}/variantes",
+            $"/api/catalogo/productos/{producto.Id}/variantes",
             new PeticionVariante("CAM-M-BIS", new() { ["talla"] = "M" }));
 
         Assert.Equal(HttpStatusCode.Created, primera.StatusCode);
@@ -242,7 +242,7 @@ public class CatalogoTests(ApiFixture api)
         var producto = await CrearProductoAsync(cliente, "CAM2", "Camiseta", unidad.Id, ["talla", "color"]);
 
         using var incompleta = await cliente.PostAsJsonAsync(
-            $"/catalogo/productos/{producto.Id}/variantes",
+            $"/api/catalogo/productos/{producto.Id}/variantes",
             new PeticionVariante("CAM2-M", new() { ["talla"] = "M" }));
 
         Assert.Equal(HttpStatusCode.BadRequest, incompleta.StatusCode);
@@ -254,7 +254,7 @@ public class CatalogoTests(ApiFixture api)
         var cliente = await ClienteDeEmpresaNuevaAsync();
 
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/catalogo/productos",
+            "/api/catalogo/productos",
             new PeticionProducto("X", "Sin unidad", Guid.CreateVersion7(), null, null, null, false, false));
 
         Assert.Equal(HttpStatusCode.NotFound, respuesta.StatusCode);
@@ -267,7 +267,7 @@ public class CatalogoTests(ApiFixture api)
 
         using var cliente = api.CreateClient();
         using var alta = await cliente.PostAsJsonAsync(
-            "/empresas",
+            "/api/empresas",
             new PeticionAlta(nit, "Pyme de Pruebas S.A.S.", correo, "Administradora", Clave));
 
         Assert.Equal(HttpStatusCode.Created, alta.StatusCode);
@@ -281,7 +281,7 @@ public class CatalogoTests(ApiFixture api)
         var (nit, correo) = await AltaAsync();
 
         using var anonimo = api.CreateClient();
-        using var login = await anonimo.PostAsJsonAsync("/auth/login", new PeticionLogin(nit, correo, Clave));
+        using var login = await anonimo.PostAsJsonAsync("/api/auth/login", new PeticionLogin(nit, correo, Clave));
         Assert.Equal(HttpStatusCode.OK, login.StatusCode);
 
         var sesion = (await login.Content.ReadFromJsonAsync<RespuestaSesion>())!;
@@ -299,7 +299,7 @@ public class CatalogoTests(ApiFixture api)
     private async Task<HttpClient> ClienteConPermisosAsync(string nit, string correo)
     {
         using var anonimo = api.CreateClient();
-        using var login = await anonimo.PostAsJsonAsync("/auth/login", new PeticionLogin(nit, correo, Clave));
+        using var login = await anonimo.PostAsJsonAsync("/api/auth/login", new PeticionLogin(nit, correo, Clave));
         var sesion = (await login.Content.ReadFromJsonAsync<RespuestaSesion>())!;
 
         var cliente = api.CreateClient();
@@ -313,7 +313,7 @@ public class CatalogoTests(ApiFixture api)
     private static async Task<RespuestaUnidad> CrearUnidadAsync(HttpClient cliente, string codigo, int decimales)
     {
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/catalogo/unidades",
+            "/api/catalogo/unidades",
             new PeticionUnidad(codigo, codigo == "KG" ? "Kilogramo" : "Unidad", decimales));
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
@@ -324,7 +324,7 @@ public class CatalogoTests(ApiFixture api)
     private static async Task<RespuestaCategoria> CrearCategoriaAsync(HttpClient cliente, string nombre, Guid? padre)
     {
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/catalogo/categorias",
+            "/api/catalogo/categorias",
             new PeticionCategoria(nombre, padre));
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);
@@ -340,7 +340,7 @@ public class CatalogoTests(ApiFixture api)
         IReadOnlyList<string>? atributos = null)
     {
         using var respuesta = await cliente.PostAsJsonAsync(
-            "/catalogo/productos",
+            "/api/catalogo/productos",
             new PeticionProducto(sku, nombre, unidadId, null, null, atributos, false, false));
 
         Assert.Equal(HttpStatusCode.Created, respuesta.StatusCode);

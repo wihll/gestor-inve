@@ -10,11 +10,11 @@ Regla: consultar aquí primero; solo después grep/leer fuentes. Cada nota tiene
 | `arquitectura.md` | Stack, monolito modular, invariantes técnicas y la estructura real de la solución (H1) |
 | `roadmap.md` | Fases 1-4 con criterios de salida |
 | `plan-esqueleto.md` | Hitos H0-H10 para crear el proyecto y la Fase 1 |
-| `decisiones/` | ADRs: 0001 stack, 0002 licencia, 0003 persistencia y RLS, 0004 autenticación, 0005 catálogo, 0006 kardex, 0007 web; se supersede, no se edita |
+| `decisiones/` | ADRs: 0001 stack, 0002 licencia, 0003 persistencia y RLS, 0004 autenticación, 0005 catálogo, 0006 kardex, 0007 web, 0008 contenedores y migraciones; se supersede, no se edita |
 | `dominio/` | Glosario y reglas: kardex, costeo (PEPS/promedio), lotes, impuestos |
 | `modulos/` | Una nota por módulo: responsabilidad, entidades, eventos, API |
 | `normativa/` | DIAN, UBL 2.1, PUC, retenciones (fuente + fecha de verificación) |
-| `runbooks/` | Instalación, backup/restore, release, migraciones, [activar graphify](runbooks/activar-graphify.md) |
+| `runbooks/` | [Instalación con Docker Compose](runbooks/instalacion.md), [activar graphify](runbooks/activar-graphify.md); pendientes: backup/restore y release |
 
 ## Convenciones del cerebro
 - Una idea por nota, <200 líneas; enlazar en vez de duplicar.

@@ -6,71 +6,11 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:5302/"
+      "url": "http://127.0.0.1:5091/"
     }
   ],
   "paths": {
-    "/empresas": {
-      "post": {
-        "tags": [
-          "Empresas"
-        ],
-        "summary": "Registra una empresa con su primer administrador.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PeticionAlta"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "description": "Created",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RespuestaAlta"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/usuarios": {
-      "get": {
-        "tags": [
-          "Usuarios"
-        ],
-        "summary": "Listado de usuarios (requiere el permiso usuarios:leer).",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RespuestaUsuarioActual"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/auth/login": {
+    "/api/auth/login": {
       "post": {
         "tags": [
           "Autenticación"
@@ -120,7 +60,7 @@
         }
       }
     },
-    "/auth/refresh": {
+    "/api/auth/refresh": {
       "post": {
         "tags": [
           "Autenticación"
@@ -160,7 +100,7 @@
         }
       }
     },
-    "/auth/logout": {
+    "/api/auth/logout": {
       "post": {
         "tags": [
           "Autenticación"
@@ -183,7 +123,7 @@
         }
       }
     },
-    "/auth/yo": {
+    "/api/auth/yo": {
       "get": {
         "tags": [
           "Autenticación"
@@ -203,7 +143,67 @@
         }
       }
     },
-    "/catalogo/unidades": {
+    "/api/empresas": {
+      "post": {
+        "tags": [
+          "Empresas"
+        ],
+        "summary": "Registra una empresa con su primer administrador.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeticionAlta"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaAlta"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/usuarios": {
+      "get": {
+        "tags": [
+          "Usuarios"
+        ],
+        "summary": "Listado de usuarios (requiere el permiso usuarios:leer).",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RespuestaUsuarioActual"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalogo/unidades": {
       "get": {
         "tags": [
           "Catálogo"
@@ -264,7 +264,7 @@
         }
       }
     },
-    "/catalogo/categorias": {
+    "/api/catalogo/categorias": {
       "get": {
         "tags": [
           "Catálogo"
@@ -325,7 +325,7 @@
         }
       }
     },
-    "/catalogo/categorias/{id}/padre": {
+    "/api/catalogo/categorias/{id}/padre": {
       "put": {
         "tags": [
           "Catálogo"
@@ -369,7 +369,7 @@
         }
       }
     },
-    "/catalogo/productos": {
+    "/api/catalogo/productos": {
       "get": {
         "tags": [
           "Catálogo"
@@ -440,7 +440,7 @@
         }
       }
     },
-    "/catalogo/productos/{id}": {
+    "/api/catalogo/productos/{id}": {
       "get": {
         "tags": [
           "Catálogo"
@@ -481,7 +481,7 @@
         }
       }
     },
-    "/catalogo/productos/{id}/variantes": {
+    "/api/catalogo/productos/{id}/variantes": {
       "post": {
         "tags": [
           "Catálogo"
@@ -542,7 +542,7 @@
         }
       }
     },
-    "/catalogo/variantes/{id}/codigos": {
+    "/api/catalogo/variantes/{id}/codigos": {
       "post": {
         "tags": [
           "Catálogo"
@@ -593,7 +593,7 @@
         }
       }
     },
-    "/catalogo/variantes/{id}/limites": {
+    "/api/catalogo/variantes/{id}/limites": {
       "put": {
         "tags": [
           "Catálogo"
@@ -637,7 +637,7 @@
         }
       }
     },
-    "/catalogo/codigos/{codigo}": {
+    "/api/catalogo/codigos/{codigo}": {
       "get": {
         "tags": [
           "Catálogo"
@@ -677,7 +677,7 @@
         }
       }
     },
-    "/inventario/bodegas": {
+    "/api/inventario/bodegas": {
       "get": {
         "tags": [
           "Inventario"
@@ -738,7 +738,7 @@
         }
       }
     },
-    "/inventario/bodegas/{id}/ubicaciones": {
+    "/api/inventario/bodegas/{id}/ubicaciones": {
       "post": {
         "tags": [
           "Inventario"
@@ -799,7 +799,7 @@
         }
       }
     },
-    "/inventario/movimientos": {
+    "/api/inventario/movimientos": {
       "post": {
         "tags": [
           "Inventario"
@@ -879,7 +879,7 @@
         }
       }
     },
-    "/inventario/traslados": {
+    "/api/inventario/traslados": {
       "post": {
         "tags": [
           "Inventario"
@@ -932,7 +932,7 @@
         }
       }
     },
-    "/inventario/movimientos/{id}/reversa": {
+    "/api/inventario/movimientos/{id}/reversa": {
       "post": {
         "tags": [
           "Inventario"
@@ -993,7 +993,7 @@
         }
       }
     },
-    "/inventario/existencias": {
+    "/api/inventario/existencias": {
       "get": {
         "tags": [
           "Inventario"
@@ -1034,7 +1034,7 @@
         }
       }
     },
-    "/inventario/kardex": {
+    "/api/inventario/kardex": {
       "get": {
         "tags": [
           "Inventario"
@@ -2041,13 +2041,13 @@
   },
   "tags": [
     {
+      "name": "Autenticación"
+    },
+    {
       "name": "Empresas"
     },
     {
       "name": "Usuarios"
-    },
-    {
-      "name": "Autenticación"
     },
     {
       "name": "Catálogo"

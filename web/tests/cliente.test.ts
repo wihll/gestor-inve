@@ -45,7 +45,7 @@ describe("ClienteApi", () => {
 
     const cliente = new ClienteApi();
     await cliente.entrar({ nit: "900", correo: "a@b.co", contrasena: "Clave-Muy-Larga-2026" });
-    await cliente.get("/catalogo/productos");
+    await cliente.get("/api/catalogo/productos");
 
     const cabeceras = fetchMock.mock.calls[1]?.[1].headers as Record<string, string>;
     expect(cabeceras.Authorization).toBe("Bearer acceso-nuevo");
@@ -61,11 +61,11 @@ describe("ClienteApi", () => {
     localStorage.setItem("gestorinve.refresco", "empresa.refresco-viejo");
 
     const cliente = new ClienteApi();
-    const resultado = await cliente.get<{ dato: number }>("/catalogo/productos");
+    const resultado = await cliente.get<{ dato: number }>("/api/catalogo/productos");
 
     expect(resultado.dato).toBe(42);
     expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[1]?.[0]).toContain("/auth/refresh");
+    expect(fetchMock.mock.calls[1]?.[0]).toContain("/api/auth/refresh");
   });
 
   /// **La prueba que importa.** El servidor revoca la familia completa cuando un token de
@@ -75,7 +75,7 @@ describe("ClienteApi", () => {
     let refrescos = 0;
 
     const fetchMock = vi.fn(async (url: string) => {
-      if (String(url).includes("/auth/refresh")) {
+      if (String(url).includes("/api/auth/refresh")) {
         refrescos += 1;
         return respuesta(200, sesion);
       }
@@ -88,9 +88,9 @@ describe("ClienteApi", () => {
 
     const cliente = new ClienteApi();
     await Promise.all([
-      cliente.get("/catalogo/productos"),
-      cliente.get("/inventario/existencias"),
-      cliente.get("/inventario/bodegas"),
+      cliente.get("/api/catalogo/productos"),
+      cliente.get("/api/inventario/existencias"),
+      cliente.get("/api/inventario/bodegas"),
     ]);
 
     expect(refrescos).toBe(1);
@@ -109,7 +109,7 @@ describe("ClienteApi", () => {
       cerrada = true;
     });
 
-    await expect(cliente.get("/catalogo/productos")).rejects.toBeInstanceOf(ErrorApi);
+    await expect(cliente.get("/api/catalogo/productos")).rejects.toBeInstanceOf(ErrorApi);
     expect(cerrada).toBe(true);
     expect(localStorage.getItem("gestorinve.refresco")).toBeNull();
   });
@@ -120,7 +120,7 @@ describe("ClienteApi", () => {
 
     const cliente = new ClienteApi();
 
-    await expect(cliente.get("/catalogo/productos")).rejects.toBeInstanceOf(ErrorApi);
+    await expect(cliente.get("/api/catalogo/productos")).rejects.toBeInstanceOf(ErrorApi);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -132,7 +132,7 @@ describe("ClienteApi", () => {
 
     const cliente = new ClienteApi();
 
-    await expect(cliente.post("/inventario/movimientos", {})).rejects.toThrow(
+    await expect(cliente.post("/api/inventario/movimientos", {})).rejects.toThrow(
       "No hay existencias suficientes.",
     );
   });
@@ -145,7 +145,7 @@ describe("ClienteApi", () => {
     const cliente = new ClienteApi();
     await cliente.salir();
 
-    expect(fetchMock.mock.calls[0]?.[0]).toContain("/auth/logout");
+    expect(fetchMock.mock.calls[0]?.[0]).toContain("/api/auth/logout");
     expect(localStorage.getItem("gestorinve.refresco")).toBeNull();
     expect(cliente.tieneSesion).toBe(false);
   });
@@ -164,6 +164,6 @@ describe("ClienteApi", () => {
 
     const cliente = new ClienteApi();
 
-    await expect(cliente.put("/catalogo/variantes/x/limites", {})).resolves.toBeUndefined();
+    await expect(cliente.put("/api/catalogo/variantes/x/limites", {})).resolves.toBeUndefined();
   });
 });
