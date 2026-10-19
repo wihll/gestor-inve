@@ -13,7 +13,7 @@ COPY . .
 # OpenAPI, así que un cambio de contrato en la Api rompe aquí y no en una pantalla.
 RUN npm run build
 
-FROM nginx:1.29-alpine AS final
+FROM nginx:1.31-alpine AS final
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=construccion /origen/dist /usr/share/nginx/html
