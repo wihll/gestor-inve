@@ -1,6 +1,6 @@
 # Imagen de la web. El build de Vite produce estáticos; lo que queda en la imagen final es
 # nginx sirviéndolos, sin Node ni `node_modules`.
-FROM node:22-alpine AS construccion
+FROM node:26-alpine AS construccion
 WORKDIR /origen
 
 # `npm ci` respeta el lockfile al pie de la letra: la imagen no puede resolver una versión
