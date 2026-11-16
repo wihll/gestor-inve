@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=gestor-inve
+GenericName=Gestor de inventarios
+Comment=Inventario, kardex y lotes para pequeñas y medianas empresas
+Exec=/usr/bin/gestor-inve
+Icon=gestor-inve
+Terminal=false
+Categories=Office;Finance;

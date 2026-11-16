@@ -1,0 +1,15 @@
+Package: gestor-inve
+Version: @VERSION@
+Section: misc
+Priority: optional
+Architecture: amd64
+Depends: postgresql (>= 15), adduser, libicu74 | libicu72 | libicu70, libssl3 | libssl3t64
+Recommends: chromium | chromium-browser | google-chrome-stable | microsoft-edge-stable, pkexec | policykit-1
+Maintainer: gestor-inve <noreply@github.com>
+Homepage: https://github.com/wihll/gestor-inve
+Description: Gestor de inventarios para pequeñas y medianas empresas
+ Catálogo con variantes, bodegas y ubicaciones, lotes y seriales con salida
+ por vencimiento, y kardex inmutable valorizado. Multiempresa.
+ .
+ Instala un servicio local que escucha solo en este equipo y una ventana
+ propia para usarlo. Los datos se guardan en PostgreSQL.

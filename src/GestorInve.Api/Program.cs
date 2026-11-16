@@ -24,6 +24,10 @@ if (args.Contains("--comprobar-salud", StringComparer.Ordinal))
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Instalado en Windows corre como servicio (ADR 0011). Fuera de un servicio esta llamada no
+// hace nada, así que no afecta a Linux, a Docker ni a las pruebas.
+builder.Host.UseWindowsService(opciones => opciones.ServiceName = "GestorInve");
+
 // Los enum viajan como texto («Entrada»), no como número. Un entero en el contrato es
 // ilegible y, peor, frágil: reordenar o insertar un valor del enum cambiaría en silencio el
 // significado de los datos que ya enviaron los clientes.
@@ -160,6 +164,48 @@ if (conPersistencia)
     api.MapEndpointsEmpresa();
     api.MapEndpointsCatalogo();
     api.MapEndpointsInventario();
+}
+
+// En la instalación de escritorio no hay nginx: la propia Api sirve la web (ADR 0011). Solo
+// ocurre si la carpeta existe, así que en Docker —donde la sirve nginx— y en las pruebas no
+// cambia nada.
+var raizWeb = app.Configuration["GESTORINVE_WEB"] ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
+var indice = Path.Combine(raizWeb, "index.html");
+
+if (File.Exists(indice))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(Path.GetFullPath(raizWeb)),
+        OnPrepareResponse = contexto =>
+        {
+            // Los nombres de Vite llevan hash de contenido, así que son inmutables.
+            if (contexto.Context.Request.Path.StartsWithSegments("/assets", StringComparison.Ordinal))
+            {
+                contexto.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            }
+        },
+    });
+
+    // SPA: una ruta que el servidor no conoce la decide el enrutador del cliente. Pero **no**
+    // bajo `/api`: una ruta de Api inexistente tiene que seguir siendo un 404 y no un HTML con
+    // 200, o un cliente que integre recibiría una página donde esperaba un error.
+    app.MapFallback(async contexto =>
+    {
+        var esLectura = HttpMethods.IsGet(contexto.Request.Method) || HttpMethods.IsHead(contexto.Request.Method);
+
+        if (!esLectura || contexto.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+        {
+            contexto.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        // `index.html` no se cachea: apunta a bundles con hash, y una copia vieja dejaría al
+        // usuario pidiendo archivos que la actualización ya borró.
+        contexto.Response.ContentType = "text/html; charset=utf-8";
+        contexto.Response.Headers.CacheControl = "no-cache";
+        await contexto.Response.SendFileAsync(indice);
+    });
 }
 
 await app.RunAsync();

@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+fi
+
+# **Desinstalar no borra los datos.** Ni con `remove` ni con `purge` se toca la base de datos:
+# borrar el inventario de una empresa por quitar un programa sería imperdonable. `purge` solo
+# quita la configuración de este equipo.
+if [ "${1:-}" = "purge" ]; then
+    rm -rf /etc/gestor-inve
+    echo "gestor-inve: la base de datos se conserva. Para borrarla definitivamente:" >&2
+    echo "  sudo -u postgres dropdb gestorinve && sudo -u postgres dropuser gestorinve" >&2
+fi

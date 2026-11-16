@@ -15,3 +15,4 @@ web/test-results/
 # Secretos de la instalación local; solo se versiona `.env.ejemplo`.
 .env
 test-results/
+dist/

@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WinExe: en Windows no abre una consola negra detrás de la ventana. En Linux no cambia nada. -->
+    <OutputType>WinExe</OutputType>
+    <AssemblyName>GestorInve</AssemblyName>
+    <RootNamespace>GestorInve.Escritorio</RootNamespace>
+    <!-- Lo exige el generador de `LibraryImport` del único P/Invoke (el cuadro de error en Windows). -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GestorInve.Escritorio.Tests" />
+  </ItemGroup>
+</Project>
