@@ -1,0 +1,8 @@
+# Los scripts de Windows llevan BOM y CRLF a propósito (Windows PowerShell 5.1 e Inno Setup leen
+# como ANSI un archivo sin BOM); git no debe normalizarlos.
+instalador/windows/* -text
+*.ico binary
+
+# Los de Linux tienen que conservar LF aunque se clone en Windows: con CRLF, `sh` no los ejecuta.
+instalador/linux/** text eol=lf
+scripts/*.sh text eol=lf

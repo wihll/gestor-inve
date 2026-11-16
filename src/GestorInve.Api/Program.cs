@@ -28,6 +28,16 @@ var builder = WebApplication.CreateBuilder(args);
 // hace nada, así que no afecta a Linux, a Docker ni a las pruebas.
 builder.Host.UseWindowsService(opciones => opciones.ServiceName = "GestorInve");
 
+// Configuración de la instalación local, en un archivo aparte. En Windows los secretos no pueden
+// ir en el entorno del servicio: ese entorno vive en el registro, en una clave que cualquier
+// usuario del equipo puede leer. Van en un archivo con permisos restringidos, y aquí solo llega
+// su ruta. Si la variable está puesta, el archivo **tiene** que existir: arrancar sin él sería
+// arrancar sin clave de firma ni base de datos.
+if (Environment.GetEnvironmentVariable("GESTORINVE_CONFIG") is { Length: > 0 } rutaConfiguracion)
+{
+    builder.Configuration.AddJsonFile(rutaConfiguracion, optional: false, reloadOnChange: false);
+}
+
 // Los enum viajan como texto («Entrada»), no como número. Un entero en el contrato es
 // ilegible y, peor, frágil: reordenar o insertar un valor del enum cambiaría en silencio el
 // significado de los datos que ya enviaron los clientes.
