@@ -1,6 +1,6 @@
 # Imagen de la Api. Dos etapas: el SDK solo existe durante la construcción, así que la
 # imagen que se despliega no lleva compilador, ni fuentes, ni caché de NuGet.
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS construccion
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS construccion
 WORKDIR /origen
 
 # Primero solo los manifiestos: mientras no cambien, Docker reutiliza la capa de `restore`.
