@@ -26,7 +26,7 @@ RUN dotnet publish src/GestorInve.Api \
     -warnaserror \
     --output /aplicacion
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS final
 WORKDIR /aplicacion
 
 # Usuario sin privilegios, creado explícitamente. Un proceso que no necesita root no debe
