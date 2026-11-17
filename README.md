@@ -7,7 +7,15 @@ ERP de inventarios **open source** (AGPL-3.0) para Windows y Linux. Stack: .NET 
 - Cómo contribuir: [`CONTRIBUTING.md`](CONTRIBUTING.md) · Contrato de calidad: [`CONSTRAINTS.md`](CONSTRAINTS.md)
 - Hoja de ruta: [`brain/plan-esqueleto.md`](brain/plan-esqueleto.md)
 
-## Instalar
+## Instalar en un computador (sin Docker)
+Descargue el instalador de la página [Releases](https://github.com/wihll/gestor-inve/releases):
+
+- **Ubuntu/Debian:** `sudo apt install ./gestor-inve_<versión>_amd64.deb`
+- **Windows 10/11:** ejecute `gestor-inve-<versión>-setup.exe`
+
+Guía, copias de seguridad y diagnóstico: [`brain/runbooks/instalacion-escritorio.md`](brain/runbooks/instalacion-escritorio.md).
+
+## Instalar con Docker (servidor)
 
 ```bash
 cp .env.ejemplo .env     # y generar los tres secretos; ver el runbook

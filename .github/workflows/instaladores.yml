@@ -1,0 +1,315 @@
+# Construye los instaladores de escritorio y **los instala de verdad** en el runner.
+#
+# Un instalador que solo se compila es código no ejecutado: lo que falla en un instalador es la
+# instalación. Cada job instala en limpio, comprueba que el sistema responde, reinstala encima
+# (una actualización no puede perder datos ni secretos) y desinstala (los datos se conservan).
+#
+# Con una etiqueta `v*` publica los dos instaladores en Releases.
+name: Instaladores
+
+on:
+  pull_request:
+    paths:
+      - "instalador/**"
+      - "src/**"
+      - "web/**"
+      - "Directory.*.props"
+      - ".github/workflows/instaladores.yml"
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  version:
+    name: Versión
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.calcular.outputs.version }}
+    steps:
+      - id: calcular
+        run: |
+          # Con etiqueta, su número; sin ella, una versión de prueba que nunca se publica.
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+  linux:
+    name: Paquete .deb (construir e instalar)
+    needs: version
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      BASE: http://127.0.0.1:48620
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Construir
+        run: instalador/linux/construir.sh "$VERSION"
+      - name: Instalar en limpio
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y "./dist/gestor-inve_${VERSION}_amd64.deb"
+      - name: El sistema instalado responde
+        run: |
+          set -uo pipefail
+          fallos=0
+          comprobar() { # comprobar <descripción> <esperado> <método> <ruta> [datos]
+            if [ -n "${5:-}" ]; then
+              codigo=$(curl -s -o cuerpo.txt -w '%{http_code}' -X "$3" "$BASE$4" -H 'content-type: application/json' -d "$5")
+            else
+              codigo=$(curl -s -o cuerpo.txt -w '%{http_code}' -X "$3" "$BASE$4")
+            fi
+            if [ "$codigo" = "$2" ]; then echo "ok   $3 $4 -> $codigo"; else
+              fallos=$((fallos + 1))
+              echo "::error title=$1::$3 $4 devolvió $codigo y se esperaba $2. $(head -c 600 cuerpo.txt | tr '\n%\r' '  ')"
+            fi
+          }
+
+          for i in $(seq 1 60); do curl -fsS "$BASE/ready" > /dev/null 2>&1 && break; sleep 2; done
+
+          comprobar "El servicio no está listo" 200 GET /ready
+          comprobar "La Api no sirve la web" 200 GET /
+          comprobar "Las rutas del SPA no resuelven" 200 GET /inventario
+          comprobar "Una ruta de Api inexistente no da 404" 404 GET /api/no-existe
+          comprobar "La Api no responde" 401 GET /api/auth/yo
+          comprobar "El alta de empresa falló" 201 POST /api/empresas \
+            '{"nit":"DEB900000001","razonSocial":"Prueba Deb","correoAdmin":"admin@prueba.test","nombreAdmin":"Admin","contrasena":"Contrasena-De-Prueba-1"}'
+
+          if [ "$fallos" -ne 0 ]; then
+            sudo journalctl -u gestor-inve --no-pager -n 60 | tail -c 1800 | tr '\n%\r' '  ' | sed 's/^/::error title=Registro del servicio::/'
+            exit 1
+          fi
+      - name: Corre sin privilegios y solo en el bucle local
+        run: |
+          set -euo pipefail
+          test "$(systemctl is-active gestor-inve)" = "active"
+          test "$(ps -o user:20= -C GestorInve.Api | head -1 | tr -d ' ')" = "gestor-inve"
+          # Nada expuesto a la red: una instalación de un solo equipo no escucha fuera de él.
+          sudo ss -ltnp | grep 48620 | tee escucha.txt
+          grep -q "127.0.0.1:48620" escucha.txt
+          # El rol de la base sin privilegios: de eso depende el aislamiento entre empresas.
+          test "$(sudo -u postgres psql -tAc "select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'")" = "f"
+          # Los secretos, solo para root.
+          test "$(sudo stat -c '%a %U' /etc/gestor-inve/gestor-inve.env)" = "600 root"
+          # El lanzador reconoce el servicio (sin abrir ventana: el runner no tiene pantalla).
+          gestor-inve --solo-comprobar
+      - name: Una actualización conserva datos y secretos
+        run: |
+          set -euo pipefail
+          antes=$(sudo sha256sum /etc/gestor-inve/gestor-inve.env | cut -d' ' -f1)
+          sudo dpkg -i "./dist/gestor-inve_${VERSION}_amd64.deb"
+          test "$antes" = "$(sudo sha256sum /etc/gestor-inve/gestor-inve.env | cut -d' ' -f1)"
+          for i in $(seq 1 60); do curl -fsS "$BASE/ready" > /dev/null 2>&1 && break; sleep 2; done
+          test "$(sudo -u postgres psql -tAc 'select count(*) from seguridad.directorio_empresas' gestorinve)" = "1"
+      - name: La copia de seguridad se puede restaurar
+        run: |
+          set -euo pipefail
+          sudo gestor-inve-respaldo "$PWD/copias"
+          sudo chmod -R a+rX copias
+          test "$(pg_restore --list copias/*.dump | grep -c 'TABLE DATA')" -ge 16
+      - name: Un rol privilegiado aborta la instalación
+        run: |
+          set -uo pipefail
+          # Comprobación invertida: si el rol quedara con BYPASSRLS, instalar **debe** fallar.
+          sudo -u postgres psql -qc 'alter role gestorinve bypassrls'
+          if sudo dpkg -i "./dist/gestor-inve_${VERSION}_amd64.deb" > /dev/null 2>&1; then
+            echo "::error::La instalación aceptó un rol que anula el aislamiento entre empresas."
+            exit 1
+          fi
+          sudo -u postgres psql -qc 'alter role gestorinve nobypassrls'
+          sudo dpkg --configure gestor-inve
+      - name: Desinstalar no borra los datos
+        run: |
+          set -euo pipefail
+          sudo apt-get purge -y gestor-inve
+          test "$(sudo -u postgres psql -tAc 'select count(*) from seguridad.directorio_empresas' gestorinve)" = "1"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gestor-inve-linux
+          path: dist/*.deb
+          if-no-files-found: error
+
+  windows:
+    name: Instalador de Windows (construir e instalar)
+    needs: version
+    runs-on: windows-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Inno Setup
+        run: |
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
+      - name: Construir
+        run: instalador\windows\construir.ps1 -Version $env:VERSION
+      - name: Instalar en limpio
+        run: |
+          $setup = "dist\gestor-inve-$env:VERSION-setup.exe"
+          $p = Start-Process $setup -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$PWD\setup.log" -Wait -PassThru
+          Write-Host "Setup terminó con código $($p.ExitCode)"
+      - name: El sistema instalado responde
+        run: |
+          $base = 'http://127.0.0.1:48620'
+          $fallos = 0
+          function Comprobar($descripcion, $esperado, $metodo, $ruta, $datos) {
+            $codigo = 0; $cuerpo = ''
+            try {
+              $a = @{ Uri = "$base$ruta"; Method = $metodo; UseBasicParsing = $true; TimeoutSec = 15; SkipHttpErrorCheck = $true }
+              if ($datos) { $a.Body = $datos; $a.ContentType = 'application/json' }
+              $r = Invoke-WebRequest @a; $codigo = [int]$r.StatusCode; $cuerpo = "$($r.Content)"
+            } catch { $cuerpo = $_.Exception.Message }
+            if ($codigo -eq $esperado) { Write-Host "ok   $metodo $ruta -> $codigo" } else {
+              $script:fallos++
+              $corto = $cuerpo.Substring(0, [Math]::Min(500, $cuerpo.Length)) -replace '[\r\n%]', ' '
+              Write-Host "::error title=$descripcion::$metodo $ruta devolvió $codigo y se esperaba $esperado. $corto"
+            }
+          }
+
+          foreach ($i in 1..60) { try { if ((Invoke-WebRequest "$base/ready" -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200) { break } } catch { }; Start-Sleep 2 }
+
+          Comprobar 'El servicio no está listo' 200 GET /ready
+          Comprobar 'La Api no sirve la web' 200 GET /
+          Comprobar 'Las rutas del SPA no resuelven' 200 GET /inventario
+          Comprobar 'Una ruta de Api inexistente no da 404' 404 GET /api/no-existe
+          Comprobar 'La Api no responde' 401 GET /api/auth/yo
+          Comprobar 'El alta de empresa falló' 201 POST /api/empresas '{"nit":"WIN900000001","razonSocial":"Prueba Windows","correoAdmin":"admin@prueba.test","nombreAdmin":"Admin","contrasena":"Contrasena-De-Prueba-1"}'
+
+          if ($fallos -ne 0) { exit 1 }
+      - name: Servicios, permisos y aislamiento
+        run: |
+          $ErrorActionPreference = 'Stop'
+          function Exigir($condicion, $mensaje) { if (-not $condicion) { Write-Host "::error::$mensaje"; exit 1 } else { Write-Host "ok   $mensaje" } }
+
+          $api = Get-CimInstance Win32_Service -Filter "Name='GestorInve'"
+          $bd  = Get-CimInstance Win32_Service -Filter "Name='GestorInvePostgres'"
+          Exigir ($api.State -eq 'Running' -and $bd.State -eq 'Running') 'Los dos servicios están en marcha'
+          Exigir ($api.StartName -match 'LocalService') "La Api corre como LocalService ($($api.StartName))"
+          Exigir ($bd.StartName -match 'NetworkService') "PostgreSQL corre como NetworkService ($($bd.StartName))"
+          # Ruta entre comillas: sin ellas, una ruta con espacios es una vulnerabilidad conocida.
+          Exigir ($api.PathName.StartsWith('"')) "La ruta del servicio va entre comillas ($($api.PathName))"
+
+          # Nada expuesto a la red.
+          $escuchas = Get-NetTCPConnection -State Listen -LocalPort 48620, 48621 | Select-Object -ExpandProperty LocalAddress -Unique
+          Exigir (-not ($escuchas | Where-Object { $_ -notin '127.0.0.1', '::1' })) "Solo se escucha en el bucle local ($($escuchas -join ', '))"
+
+          # Los secretos no los pueden leer los usuarios normales del equipo.
+          $acl = (icacls "$env:ProgramData\GestorInve\secretos.json") -join ' '
+          Exigir ($acl -notmatch 'BUILTIN\\Users|Usuarios|Everyone|Todos|Authenticated') "secretos.json no es legible por los usuarios ($acl)"
+          $acl = (icacls "$env:ProgramData\GestorInve\configuracion.json") -join ' '
+          Exigir ($acl -notmatch 'BUILTIN\\Users|Usuarios|Everyone|Todos|Authenticated') 'configuracion.json no es legible por los usuarios'
+
+          # El entorno del servicio (legible en el registro) no lleva secretos.
+          $entorno = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\GestorInve').Environment -join ' '
+          Exigir ($entorno -notmatch 'Password|Clave=') 'El entorno del servicio no contiene secretos'
+
+          # El rol de la base sin privilegios.
+          $s = Get-Content "$env:ProgramData\GestorInve\secretos.json" -Raw | ConvertFrom-Json
+          $env:PGPASSWORD = $s.ClaveSuper
+          $privilegiado = & "$env:ProgramFiles\GestorInve\pgsql\bin\psql.exe" -h 127.0.0.1 -p 48621 -U postgres -tAc "select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'"
+          Exigir ("$privilegiado".Trim() -eq 'f') 'El rol de la aplicación no tiene privilegios'
+
+          # El lanzador reconoce el servicio (sin abrir ventana).
+          $l = Start-Process "$env:ProgramFiles\GestorInve\app\GestorInve.exe" -ArgumentList 'http://127.0.0.1:48620', '--solo-comprobar' -Wait -PassThru
+          Exigir ($l.ExitCode -eq 0) "El lanzador reconoce el servicio (código $($l.ExitCode))"
+      - name: Una actualización conserva datos y secretos
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $antes = (Get-FileHash "$env:ProgramData\GestorInve\secretos.json").Hash
+          $p = Start-Process "dist\gestor-inve-$env:VERSION-setup.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$PWD\setup2.log" -Wait -PassThru
+          if ($antes -ne (Get-FileHash "$env:ProgramData\GestorInve\secretos.json").Hash) { Write-Host '::error::La actualización cambió los secretos'; exit 1 }
+          foreach ($i in 1..60) { try { if ((Invoke-WebRequest 'http://127.0.0.1:48620/ready' -UseBasicParsing -TimeoutSec 3).StatusCode -eq 200) { break } } catch { }; Start-Sleep 2 }
+          $s = Get-Content "$env:ProgramData\GestorInve\secretos.json" -Raw | ConvertFrom-Json
+          $env:PGPASSWORD = $s.ClaveSuper
+          $empresas = & "$env:ProgramFiles\GestorInve\pgsql\bin\psql.exe" -h 127.0.0.1 -p 48621 -U postgres -d gestorinve -tAc 'select count(*) from seguridad.directorio_empresas'
+          if ("$empresas".Trim() -ne '1') { Write-Host "::error::Tras actualizar hay $empresas empresas y se esperaba 1"; exit 1 }
+          Write-Host 'ok   la actualización conservó datos y secretos'
+      - name: La copia de seguridad se puede restaurar
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:GESTORINVE_SIN_PAUSA = '1'
+          & "$env:ProgramFiles\GestorInve\respaldar.ps1" -Raiz "$env:ProgramFiles\GestorInve" -Destino "$PWD\copias"
+          $copia = Get-ChildItem copias\*.dump | Select-Object -First 1
+          $tablas = (& "$env:ProgramFiles\GestorInve\pgsql\bin\pg_restore.exe" --list $copia.FullName | Select-String 'TABLE DATA').Count
+          if ($tablas -lt 16) { Write-Host "::error::La copia solo trae $tablas tablas"; exit 1 }
+          Write-Host "ok   copia con $tablas tablas"
+      - name: Desinstalar no borra los datos
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $p = Start-Process "$env:ProgramFiles\GestorInve\unins000.exe" -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait -PassThru
+          Start-Sleep 5
+          if (Get-Service GestorInve -ErrorAction SilentlyContinue) { Write-Host '::error::El servicio sigue registrado tras desinstalar'; exit 1 }
+          if (-not (Test-Path "$env:ProgramData\GestorInve\datos\PG_VERSION")) { Write-Host '::error::Desinstalar borró la base de datos'; exit 1 }
+          Write-Host 'ok   servicios quitados y datos conservados'
+      - name: Diagnóstico
+        if: failure()
+        run: |
+          # Como anotaciones: el registro completo del job no siempre es legible desde fuera.
+          foreach ($f in "$env:ProgramData\GestorInve\instalacion.log", 'setup.log') {
+            if (Test-Path $f) {
+              $t = (Get-Content $f -Tail 40) -join ' | ' -replace '[\r\n%]', ' '
+              Write-Host "::error title=$(Split-Path $f -Leaf)::$($t.Substring([Math]::Max(0, $t.Length - 1800)))"
+            }
+          }
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; Level = 1, 2; StartTime = (Get-Date).AddMinutes(-30) } -MaxEvents 5 -ErrorAction SilentlyContinue |
+            ForEach-Object { $m = "$($_.ProviderName): $($_.Message)" -replace '[\r\n%]', ' '; Write-Host "::error title=Evento de Windows::$($m.Substring(0, [Math]::Min(700, $m.Length)))" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gestor-inve-windows
+          path: dist/*-setup.exe
+          if-no-files-found: error
+
+  publicar:
+    name: Publicar en Releases
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [version, linux, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: instaladores
+          merge-multiple: true
+      - name: Crear el Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          (cd instaladores && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          # Tolerante: si el Release ya existe (creado a mano desde la web), solo se le suben los
+          # instaladores. Así la etiqueta puede nacer del workflow o de una persona.
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "gestor-inve ${GITHUB_REF_NAME#v}" \
+              --notes "Instaladores de escritorio. **Ubuntu/Debian:** \`sudo apt install ./gestor-inve_*.deb\`. **Windows:** ejecute el \`-setup.exe\` (no está firmado: SmartScreen pedirá «Más información → Ejecutar de todas formas»). Guía completa: brain/runbooks/instalacion-escritorio.md"
+          fi
+          gh release upload "$GITHUB_REF_NAME" instaladores/* --repo "$GITHUB_REPOSITORY" --clobber

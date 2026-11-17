@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+if [ -d /run/systemd/system ]; then
+    systemctl stop gestor-inve.service 2> /dev/null || true
+
+    if [ "${1:-}" = "remove" ]; then
+        systemctl disable gestor-inve.service > /dev/null 2>&1 || true
+    fi
+fi

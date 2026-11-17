@@ -24,6 +24,20 @@ if (args.Contains("--comprobar-salud", StringComparer.Ordinal))
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Instalado en Windows corre como servicio (ADR 0011). Fuera de un servicio esta llamada no
+// hace nada, así que no afecta a Linux, a Docker ni a las pruebas.
+builder.Host.UseWindowsService(opciones => opciones.ServiceName = "GestorInve");
+
+// Configuración de la instalación local, en un archivo aparte. En Windows los secretos no pueden
+// ir en el entorno del servicio: ese entorno vive en el registro, en una clave que cualquier
+// usuario del equipo puede leer. Van en un archivo con permisos restringidos, y aquí solo llega
+// su ruta. Si la variable está puesta, el archivo **tiene** que existir: arrancar sin él sería
+// arrancar sin clave de firma ni base de datos.
+if (Environment.GetEnvironmentVariable("GESTORINVE_CONFIG") is { Length: > 0 } rutaConfiguracion)
+{
+    builder.Configuration.AddJsonFile(rutaConfiguracion, optional: false, reloadOnChange: false);
+}
+
 // Los enum viajan como texto («Entrada»), no como número. Un entero en el contrato es
 // ilegible y, peor, frágil: reordenar o insertar un valor del enum cambiaría en silencio el
 // significado de los datos que ya enviaron los clientes.
@@ -111,18 +125,18 @@ if (conPersistencia
     var registro = alcance.ServiceProvider.GetRequiredService<ILoggerFactory>()
         .CreateLogger("GestorInve.Migraciones");
 
-    var pendientes = (await contexto.Database.GetPendingMigrationsAsync()).ToList();
+    // Serializada entre procesos: dos instancias que arrancan a la vez no pueden migrar en
+    // paralelo (ver `MigracionSerializada`).
+    var aplicadas = await MigracionSerializada.AplicarAsync(contexto);
 
-    if (pendientes.Count > 0)
+    if (aplicadas.Count > 0)
     {
         // El `IsEnabled` no es decorativo: CA1873 exige no pagar el `string.Join` si el nivel
         // está apagado, y la traza de la actualización se consulta justo cuando algo falló.
         if (registro.IsEnabled(LogLevel.Information))
         {
-            registro.Aplicando(pendientes.Count, string.Join(", ", pendientes));
+            registro.Aplicando(aplicadas.Count, string.Join(", ", aplicadas));
         }
-
-        await contexto.Database.MigrateAsync();
     }
     else
     {
@@ -160,6 +174,48 @@ if (conPersistencia)
     api.MapEndpointsEmpresa();
     api.MapEndpointsCatalogo();
     api.MapEndpointsInventario();
+}
+
+// En la instalación de escritorio no hay nginx: la propia Api sirve la web (ADR 0011). Solo
+// ocurre si la carpeta existe, así que en Docker —donde la sirve nginx— y en las pruebas no
+// cambia nada.
+var raizWeb = app.Configuration["GESTORINVE_WEB"] ?? Path.Combine(AppContext.BaseDirectory, "wwwroot");
+var indice = Path.Combine(raizWeb, "index.html");
+
+if (File.Exists(indice))
+{
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(Path.GetFullPath(raizWeb)),
+        OnPrepareResponse = contexto =>
+        {
+            // Los nombres de Vite llevan hash de contenido, así que son inmutables.
+            if (contexto.Context.Request.Path.StartsWithSegments("/assets", StringComparison.Ordinal))
+            {
+                contexto.Context.Response.Headers.CacheControl = "public, max-age=31536000, immutable";
+            }
+        },
+    });
+
+    // SPA: una ruta que el servidor no conoce la decide el enrutador del cliente. Pero **no**
+    // bajo `/api`: una ruta de Api inexistente tiene que seguir siendo un 404 y no un HTML con
+    // 200, o un cliente que integre recibiría una página donde esperaba un error.
+    app.MapFallback(async contexto =>
+    {
+        var esLectura = HttpMethods.IsGet(contexto.Request.Method) || HttpMethods.IsHead(contexto.Request.Method);
+
+        if (!esLectura || contexto.Request.Path.StartsWithSegments("/api", StringComparison.OrdinalIgnoreCase))
+        {
+            contexto.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        // `index.html` no se cachea: apunta a bundles con hash, y una copia vieja dejaría al
+        // usuario pidiendo archivos que la actualización ya borró.
+        contexto.Response.ContentType = "text/html; charset=utf-8";
+        contexto.Response.Headers.CacheControl = "no-cache";
+        await contexto.Response.SendFileAsync(indice);
+    });
 }
 
 await app.RunAsync();

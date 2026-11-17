@@ -28,7 +28,18 @@ jobs:
       - run: dotnet restore
       - run: dotnet build --no-restore -warnaserror
       - name: Pruebas sin base de datos
-        run: dotnet test --no-build --filter "Categoria!=Integracion"
+        shell: bash
+        run: |
+          # Las pruebas fallidas se emiten como anotaciones: el registro completo del job no
+          # siempre es legible desde fuera, y «exit code 1» no dice qué prueba se rompió.
+          set +e -uo pipefail
+          dotnet test --no-build --filter "Categoria!=Integracion" 2>&1 | tee unitarias.log
+          estado=${PIPESTATUS[0]}
+          if [ "$estado" -ne 0 ]; then
+            grep -E "\[FAIL\]|Error Message:|Expected:|Actual:|Assert\." -A1 unitarias.log | head -40 \
+              | tr '\n%\r' '   ' | cut -c1-1800 | sed 's/^/::error title=Pruebas fallidas::/'
+          fi
+          exit "$estado"
       - name: Cobertura del dominio (umbral bloqueante)
         run: >
           dotnet test tests/GestorInve.Core.Tests --no-build
@@ -76,7 +87,8 @@ jobs:
           set -euo pipefail
           psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
             -c "create role gestorinve login password 'gestorinve';" \
-            -c "create database gestorinve owner gestorinve;"
+            -c "create database gestorinve owner gestorinve;" \
+            -c "create database gestorinve_migracion owner gestorinve;"
           test "$(psql -h 127.0.0.1 -U postgres -tAc \
             "select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'")" = "f"
       - run: dotnet restore
@@ -84,11 +96,26 @@ jobs:
       - name: Pruebas de integración
         env:
           GESTORINVE_CONEXION_TEST: Host=127.0.0.1;Port=5432;Database=gestorinve;Username=gestorinve;Password=gestorinve
+          # Base aparte para la prueba de migraciones simultáneas, que parte de una base vacía.
+          GESTORINVE_CONEXION_MIGRACION: Host=127.0.0.1;Port=5432;Database=gestorinve_migracion;Username=gestorinve;Password=gestorinve
         run: |
           # `dotnet test` sale en 0 cuando el filtro no encuentra nada: sin este guardia, renombrar
           # la etiqueta dejaría las pruebas de aislamiento sin ejecutar y el CI seguiría verde.
-          set -euo pipefail
-          dotnet test --no-build --filter "Categoria=Integracion" | tee integracion.log
+          # `set +e` explícito: Actions lanza el paso con `bash -e`, y con él el script moriría
+          # en la línea de las pruebas, antes de poder decir cuál falló.
+          set +e -uo pipefail
+          dotnet test --no-build --filter "Categoria=Integracion" 2>&1 | tee integracion.log
+          estado=${PIPESTATUS[0]}
+          if [ "$estado" -ne 0 ]; then
+            # Como anotación: «exit code 1» no dice qué prueba se rompió.
+            grep -E "\[FAIL\]|Error Message:|Expected:|Actual:|Assert\." -A1 integracion.log | head -40 \
+              | tr '\n%\r' '   ' | cut -c1-1800 | sed 's/^/::error title=Pruebas fallidas::/'
+            # Y la cola del registro sin el ruido habitual: un proceso de pruebas que se cae no
+            # deja líneas [FAIL], así que el filtro de arriba no mostraría nada.
+            grep -vE "No test matches|^Passed!|^$|Starting test execution|test files matched|VSTest version|Test run for" integracion.log \
+              | tail -25 | tr '\n%\r' '   ' | cut -c1-1800 | sed 's/^/::error title=Cola del registro::/'
+            exit "$estado"
+          fi
           ejecutadas=$(grep -oE 'Passed:[[:space:]]+[0-9]+' integracion.log \
             | grep -oE '[0-9]+' | awk '{s += $1} END {print s + 0}')
           echo "Pruebas de integración ejecutadas: ${ejecutadas:-0}"

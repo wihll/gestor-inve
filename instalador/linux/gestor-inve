@@ -1,0 +1,3 @@
+#!/bin/sh
+# Abre gestor-inve en su ventana. La dirección es la del servicio local de este equipo.
+exec /opt/gestor-inve/GestorInve "http://127.0.0.1:48620" "$@"

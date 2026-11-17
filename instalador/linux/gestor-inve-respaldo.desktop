@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=gestor-inve: copia de seguridad
+Comment=Guarda una copia de la base de datos en su carpeta personal
+Exec=pkexec /usr/bin/gestor-inve-respaldo
+Icon=gestor-inve
+Terminal=false
+Categories=Office;Utility;

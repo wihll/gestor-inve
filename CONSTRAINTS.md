@@ -28,6 +28,7 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Sesión en la web | Un solo refresco en vuelo; tres 401 simultáneos no pueden provocar más de un refresco | `tests/cliente.test.ts` |
 | Flujo de usuario | Registro, entrada, salida y kardex cuadrado, en navegador real contra la Api | Job `e2e` del CI |
 | Código generado | Las migraciones de EF se marcan `generated_code`; no cuenta como supresión | `.editorconfig` + ADR 0003 |
+| Migración serializada | Varios procesos migrando la misma base a la vez no se pisan: bloqueo consultivo antes de calcular los pendientes | `MigracionSerializadaTests` (8 simultáneas sobre base vacía) |
 | Un solo camino de actualización | El esquema se aplica con `GESTORINVE_MIGRAR=true`; nunca por omisión. Lo usan el CI, el contenedor y el instalador | Job `compose` del CI (cuenta las tablas) + ADR 0008 |
 | Rol de la base en la instalación | `scripts/init-db.sh` crea el rol sin `SUPERUSER` ni `BYPASSRLS` y **aborta** si quedó privilegiado | El propio script + job `compose` |
 | Secretos sin valor por omisión | El compose falla si faltan `POSTGRES_CLAVE`, `GESTORINVE_CLAVE_BD` o `JWT_CLAVE` | Job `compose` (comprobación invertida: sin `.env` debe fallar) |
@@ -37,5 +38,9 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Mercancía vencida | Una salida de un lote vencido se rechaza; la baja solo entra como ajuste negativo, y FEFO no elige lotes vencidos | `LotesTests` |
 | Seriales | Cantidad exactamente 1, y un serial no puede tener existencia en dos celdas | `LotesTests` |
 | Rutas del SPA y de la Api | La Api vive bajo `/api`; abrir una ruta del enrutador del cliente directamente la sirve el servidor web, no la Api | Prueba e2e «ruta del SPA» + job `compose` |
+| Instaladores ejecutados | El `.deb` y el `setup.exe` se **instalan** en el runner: sistema arriba, alta 201, actualización que conserva datos y secretos, desinstalación que conserva los datos | Workflow `Instaladores` |
+| Instalación local sin exposición | Servicio y base escuchan solo en `127.0.0.1`; servicios sin privilegios; secretos generados por instalación y no legibles por los usuarios del equipo | Workflow `Instaladores` |
+| Frontera web/Api | Con la Api sirviendo la web, una ruta inexistente bajo `/api` sigue siendo 404 | `WebEstaticaTests` |
+| Lanzador | Solo abre direcciones locales, con perfil de navegador propio | `NavegadorTests` |
 | Despliegue ejecutable | El `docker-compose.yml` se construye y se levanta en cada PR; la web y la Api responden en el mismo origen | Job `compose` del CI |
 | Análisis de seguridad | CodeQL con `security-extended` sobre C#, TypeScript y los propios workflows | `codeql.yml`, semanal y por PR |

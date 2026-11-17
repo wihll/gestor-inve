@@ -1,0 +1,102 @@
+#!/bin/sh
+# Configura gestor-inve tras instalar o actualizar. Es idempotente: una actualización conserva
+# la base de datos, el rol y los secretos, y solo reinicia el servicio.
+set -eu
+
+CONFIGURACION=/etc/gestor-inve
+ENTORNO="$CONFIGURACION/gestor-inve.env"
+
+aleatorio() { head -c "$1" /dev/urandom | od -An -tx1 | tr -d ' \n'; }
+sql() { su postgres -s /bin/sh -c "psql -v ON_ERROR_STOP=1 -tA $1"; }
+
+case "${1:-}" in
+    configure) ;;
+    *) exit 0 ;;
+esac
+
+# Usuario del servicio: de sistema, sin shell y sin carpeta personal.
+if ! getent passwd gestor-inve > /dev/null; then
+    adduser --system --group --no-create-home --home /var/lib/gestor-inve \
+        --shell /usr/sbin/nologin gestor-inve > /dev/null
+fi
+
+# PostgreSQL tiene que estar arriba para crear el rol y la base.
+if [ -d /run/systemd/system ]; then
+    systemctl start postgresql 2> /dev/null || true
+fi
+
+if ! sql "-c 'select 1'" > /dev/null 2>&1; then
+    echo "gestor-inve: PostgreSQL no está en marcha. Inícielo y ejecute: sudo dpkg --configure gestor-inve" >&2
+    exit 1
+fi
+
+if [ ! -f "$ENTORNO" ]; then
+    # Secretos **de esta instalación**: no vienen en el paquete. Una clave de firma repartida
+    # con el instalador sería la misma en todos los equipos, y un usuario de una empresa podría
+    # fabricar sesiones válidas para cualquier otra instalación.
+    clave_bd="$(aleatorio 24)"
+    clave_jwt="$(aleatorio 48)"
+    puerto="$(sql "-c 'show port'")"
+
+    if [ "$(sql "-c \"select count(*) from pg_roles where rolname = 'gestorinve'\"")" = "0" ]; then
+        # Lo que importa es lo que **no** se concede: ni SUPERUSER ni BYPASSRLS. Cualquiera de
+        # los dos anularía las políticas RLS que aíslan a las empresas entre sí (ADR 0003).
+        sql "-c \"create role gestorinve login password '$clave_bd' nosuperuser nocreatedb nocreaterole noinherit nobypassrls\""
+    else
+        # El rol ya existía (reinstalación tras borrar la configuración): se le pone la clave
+        # nueva y se le retiran los privilegios que pudiera tener.
+        sql "-c \"alter role gestorinve login password '$clave_bd' nosuperuser nocreatedb nocreaterole nobypassrls\""
+    fi
+
+    if [ "$(sql "-c \"select count(*) from pg_database where datname = 'gestorinve'\"")" = "0" ]; then
+        sql "-c 'create database gestorinve owner gestorinve'"
+    fi
+
+    install -d -m 750 -o root -g root "$CONFIGURACION"
+    umask 077
+    cat > "$ENTORNO" <<ENV
+# Generado en la instalación. No lo comparta: contiene la clave de firma de las sesiones y la
+# contraseña de la base de datos de este equipo.
+ConnectionStrings__GestorInve=Host=127.0.0.1;Port=$puerto;Database=gestorinve;Username=gestorinve;Password=$clave_bd
+Jwt__Clave=$clave_jwt
+ENV
+    chmod 600 "$ENTORNO"
+fi
+
+# Reparación: el rol y la base tienen que existir y coincidir con el archivo de secretos, también
+# en una actualización. Si se restauró una copia, se borró el rol o se le cambió la contraseña,
+# el servicio no arrancaría y el usuario no tendría forma de saber por qué. Reinstalar lo arregla.
+clave_guardada="$(sed -n 's/^ConnectionStrings__GestorInve=.*Password=\([0-9a-f]*\).*$/\1/p' "$ENTORNO")"
+
+if [ -n "$clave_guardada" ]; then
+    if [ "$(sql "-c \"select count(*) from pg_roles where rolname = 'gestorinve'\"")" = "0" ]; then
+        sql "-c \"create role gestorinve login password '$clave_guardada' nosuperuser nocreatedb nocreaterole noinherit nobypassrls\""
+    else
+        # Solo la contraseña: los privilegios no se tocan aquí, para que la comprobación de
+        # abajo siga pudiendo detectar un rol que alguien dejó privilegiado.
+        sql "-c \"alter role gestorinve login password '$clave_guardada'\"" > /dev/null
+    fi
+
+    if [ "$(sql "-c \"select count(*) from pg_database where datname = 'gestorinve'\"")" = "0" ]; then
+        sql "-c 'create database gestorinve owner gestorinve'"
+    fi
+fi
+
+# Comprobación en la propia instalación, no solo en el CI: si el rol quedó con privilegios,
+# la instalación falla aquí en vez de dejar el aislamiento anulado en silencio.
+if [ "$(sql "-c \"select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'\"")" != "f" ]; then
+    echo "gestor-inve: el rol de la base tiene privilegios que anularían el aislamiento entre empresas." >&2
+    exit 1
+fi
+
+if command -v update-desktop-database > /dev/null 2>&1; then
+    update-desktop-database -q /usr/share/applications || true
+fi
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload
+    systemctl enable gestor-inve.service > /dev/null 2>&1 || true
+    systemctl restart gestor-inve.service
+fi
+
+echo "gestor-inve instalado. Ábralo desde el menú de aplicaciones o con: gestor-inve"

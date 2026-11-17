@@ -1,0 +1,32 @@
+#!/bin/sh
+# Copia de seguridad de la base de datos de gestor-inve.
+#
+#   sudo gestor-inve-respaldo [carpeta-destino]
+#
+# En un solo equipo, sin copia, un disco dañado es perder el inventario. La copia es un volcado
+# completo (`pg_dump` en formato propio): se restaura con `pg_restore`.
+set -eu
+
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Ejecútelo con sudo: sudo gestor-inve-respaldo" >&2
+    exit 1
+fi
+
+# Con pkexec o sudo, la carpeta por omisión es la del usuario que lo pidió, no la de root.
+usuario="${PKEXEC_UID:+$(getent passwd "$PKEXEC_UID" | cut -d: -f1)}"
+usuario="${usuario:-${SUDO_USER:-root}}"
+casa="$(getent passwd "$usuario" | cut -d: -f6)"
+destino="${1:-$casa/gestor-inve-copias}"
+
+mkdir -p "$destino"
+archivo="$destino/gestor-inve-$(date +%Y%m%d-%H%M%S).dump"
+
+# Como `postgres` por el socket local: no hace falta ninguna contraseña en este script.
+su postgres -s /bin/sh -c "pg_dump --format=custom --dbname=gestorinve" > "$archivo"
+
+# La copia contiene todos los datos de la empresa: solo para su dueño.
+chmod 600 "$archivo"
+chown "$usuario": "$destino" "$archivo"
+
+echo "Copia guardada en $archivo"
+echo "Guárdela también fuera de este equipo (USB o nube): una copia en el mismo disco no protege de un disco dañado."

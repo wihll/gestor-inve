@@ -1,0 +1,42 @@
+[Unit]
+Description=gestor-inve: gestor de inventarios
+Documentation=https://github.com/wihll/gestor-inve
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=gestor-inve
+Group=gestor-inve
+WorkingDirectory=/opt/gestor-inve
+ExecStart=/opt/gestor-inve/GestorInve.Api
+
+# Los secretos (clave de firma y contraseña de la base) se generan en la instalación y viven
+# en este archivo, modo 600 y de root: systemd lo lee antes de bajar privilegios, así que ni
+# siquiera el usuario del servicio puede leerlo del disco.
+EnvironmentFile=/etc/gestor-inve/gestor-inve.env
+
+# Solo el bucle local: es una instalación de un solo equipo y nada debe quedar expuesto a la red.
+Environment=ASPNETCORE_URLS=http://127.0.0.1:48620
+Environment=ASPNETCORE_ENVIRONMENT=Production
+# Mismo camino de actualización del esquema que el contenedor y el CI (ADR 0008).
+Environment=GESTORINVE_MIGRAR=true
+Environment=HOME=/var/lib/gestor-inve
+Environment=DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+Restart=on-failure
+RestartSec=5
+
+# Un proceso que no necesita tocar el sistema no debe poder hacerlo.
+StateDirectory=gestor-inve
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
