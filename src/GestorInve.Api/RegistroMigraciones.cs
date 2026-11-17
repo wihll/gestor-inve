@@ -6,7 +6,7 @@ internal static partial class RegistroMigraciones
     [LoggerMessage(
         EventId = 2001,
         Level = LogLevel.Information,
-        Message = "Aplicando {Cantidad} migraciones pendientes: {Migraciones}")]
+        Message = "Aplicadas {Cantidad} migraciones: {Migraciones}")]
     public static partial void Aplicando(this ILogger registro, int cantidad, string migraciones);
 
     [LoggerMessage(EventId = 2002, Level = LogLevel.Information, Message = "El esquema ya estaba al día.")]

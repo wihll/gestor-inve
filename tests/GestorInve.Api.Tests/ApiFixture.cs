@@ -29,7 +29,8 @@ public sealed class ApiFixture : WebApplicationFactory<Program>, IAsyncLifetime
         var fabrica = alcance.ServiceProvider.GetRequiredService<FabricaContextoEmpresa>();
 
         await using var contexto = fabrica.Crear(null, "pruebas");
-        await contexto.Database.MigrateAsync();
+        // Serializada: este ensamblado y el otro de integración migran la misma base a la vez.
+        await MigracionSerializada.AplicarAsync(contexto);
     }
 
     public new Task DisposeAsync()

@@ -28,7 +28,8 @@ public sealed class BaseDatosFixture : IAsyncLifetime
     public async Task InitializeAsync()
     {
         await using var contexto = Crear(null);
-        await contexto.Database.MigrateAsync();
+        // Serializada: este ensamblado y el otro de integración migran la misma base a la vez.
+        await MigracionSerializada.AplicarAsync(contexto);
     }
 
     public Task DisposeAsync() => Task.CompletedTask;

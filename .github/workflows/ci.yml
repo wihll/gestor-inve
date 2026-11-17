@@ -87,7 +87,8 @@ jobs:
           set -euo pipefail
           psql -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
             -c "create role gestorinve login password 'gestorinve';" \
-            -c "create database gestorinve owner gestorinve;"
+            -c "create database gestorinve owner gestorinve;" \
+            -c "create database gestorinve_migracion owner gestorinve;"
           test "$(psql -h 127.0.0.1 -U postgres -tAc \
             "select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'")" = "f"
       - run: dotnet restore
@@ -95,6 +96,8 @@ jobs:
       - name: Pruebas de integración
         env:
           GESTORINVE_CONEXION_TEST: Host=127.0.0.1;Port=5432;Database=gestorinve;Username=gestorinve;Password=gestorinve
+          # Base aparte para la prueba de migraciones simultáneas, que parte de una base vacía.
+          GESTORINVE_CONEXION_MIGRACION: Host=127.0.0.1;Port=5432;Database=gestorinve_migracion;Username=gestorinve;Password=gestorinve
         run: |
           # `dotnet test` sale en 0 cuando el filtro no encuentra nada: sin este guardia, renombrar
           # la etiqueta dejaría las pruebas de aislamiento sin ejecutar y el CI seguiría verde.

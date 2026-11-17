@@ -125,18 +125,18 @@ if (conPersistencia
     var registro = alcance.ServiceProvider.GetRequiredService<ILoggerFactory>()
         .CreateLogger("GestorInve.Migraciones");
 
-    var pendientes = (await contexto.Database.GetPendingMigrationsAsync()).ToList();
+    // Serializada entre procesos: dos instancias que arrancan a la vez no pueden migrar en
+    // paralelo (ver `MigracionSerializada`).
+    var aplicadas = await MigracionSerializada.AplicarAsync(contexto);
 
-    if (pendientes.Count > 0)
+    if (aplicadas.Count > 0)
     {
         // El `IsEnabled` no es decorativo: CA1873 exige no pagar el `string.Join` si el nivel
         // está apagado, y la traza de la actualización se consulta justo cuando algo falló.
         if (registro.IsEnabled(LogLevel.Information))
         {
-            registro.Aplicando(pendientes.Count, string.Join(", ", pendientes));
+            registro.Aplicando(aplicadas.Count, string.Join(", ", aplicadas));
         }
-
-        await contexto.Database.MigrateAsync();
     }
     else
     {
