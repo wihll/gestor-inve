@@ -58,7 +58,10 @@ if (string.IsNullOrEmpty(datosLocales))
     datosLocales = Path.GetTempPath();
 }
 
-var perfil = Path.Combine(datosLocales, "GestorInve", "perfil");
+var perfil = Navegador.CarpetaPerfil(
+    navegador,
+    datosLocales,
+    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
 Directory.CreateDirectory(perfil);
 

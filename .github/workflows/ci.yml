@@ -28,7 +28,18 @@ jobs:
       - run: dotnet restore
       - run: dotnet build --no-restore -warnaserror
       - name: Pruebas sin base de datos
-        run: dotnet test --no-build --filter "Categoria!=Integracion"
+        shell: bash
+        run: |
+          # Las pruebas fallidas se emiten como anotaciones: el registro completo del job no
+          # siempre es legible desde fuera, y «exit code 1» no dice qué prueba se rompió.
+          set -uo pipefail
+          dotnet test --no-build --filter "Categoria!=Integracion" 2>&1 | tee unitarias.log
+          estado=${PIPESTATUS[0]}
+          if [ "$estado" -ne 0 ]; then
+            grep -E "\[FAIL\]|Error Message:|Expected:|Actual:|Assert\." -A1 unitarias.log | head -40 \
+              | tr '\n%\r' '   ' | cut -c1-1800 | sed 's/^/::error title=Pruebas fallidas::/'
+          fi
+          exit "$estado"
       - name: Cobertura del dominio (umbral bloqueante)
         run: >
           dotnet test tests/GestorInve.Core.Tests --no-build
@@ -87,8 +98,15 @@ jobs:
         run: |
           # `dotnet test` sale en 0 cuando el filtro no encuentra nada: sin este guardia, renombrar
           # la etiqueta dejaría las pruebas de aislamiento sin ejecutar y el CI seguiría verde.
-          set -euo pipefail
-          dotnet test --no-build --filter "Categoria=Integracion" | tee integracion.log
+          set -uo pipefail
+          dotnet test --no-build --filter "Categoria=Integracion" 2>&1 | tee integracion.log
+          estado=${PIPESTATUS[0]}
+          if [ "$estado" -ne 0 ]; then
+            # Como anotación: «exit code 1» no dice qué prueba se rompió.
+            grep -E "\[FAIL\]|Error Message:|Expected:|Actual:|Assert\." -A1 integracion.log | head -40 \
+              | tr '\n%\r' '   ' | cut -c1-1800 | sed 's/^/::error title=Pruebas fallidas::/'
+            exit "$estado"
+          fi
           ejecutadas=$(grep -oE 'Passed:[[:space:]]+[0-9]+' integracion.log \
             | grep -oE '[0-9]+' | awk '{s += $1} END {print s + 0}')
           echo "Pruebas de integración ejecutadas: ${ejecutadas:-0}"

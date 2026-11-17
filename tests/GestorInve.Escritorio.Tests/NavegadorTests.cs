@@ -60,6 +60,23 @@ public class NavegadorTests
         Assert.Equal("/snap/bin/chromium", elegido);
     }
 
+    [Fact]
+    public void Con_el_Chromium_snap_de_Ubuntu_el_perfil_va_donde_el_snap_puede_escribir()
+    {
+        // Un snap no puede escribir en carpetas ocultas del home: `~/.local/share` le está vedado.
+        var perfil = Navegador.CarpetaPerfil("/snap/bin/chromium", "/home/ana/.local/share", "/home/ana");
+
+        Assert.Equal("/home/ana/snap/chromium/common/GestorInve", perfil);
+    }
+
+    [Fact]
+    public void Con_un_navegador_normal_el_perfil_va_en_los_datos_locales()
+    {
+        var perfil = Navegador.CarpetaPerfil("/usr/bin/google-chrome", "/home/ana/.local/share", "/home/ana");
+
+        Assert.Equal(Path.Combine("/home/ana/.local/share", "GestorInve", "perfil"), perfil);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData("")]

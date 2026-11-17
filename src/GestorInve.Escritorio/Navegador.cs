@@ -42,7 +42,29 @@ internal static class Navegador
 
         var carpetas = (path ?? string.Empty).Split(':', StringSplitOptions.RemoveEmptyEntries);
 
-        return from nombre in nombres from carpeta in carpetas select Path.Combine(carpeta, nombre);
+        // Con `/` explícito y no `Path.Combine`: son rutas de Linux sea cual sea el sistema que
+        // ejecute este código, y en Windows `Path.Combine` las armaría con `\`.
+        return from nombre in nombres from carpeta in carpetas select $"{carpeta.TrimEnd('/')}/{nombre}";
+    }
+
+    /// <summary>
+    /// Carpeta del perfil propio. El caso que obliga a esta función es el Chromium de Ubuntu, que
+    /// es un **snap**: por su confinamiento no puede escribir en carpetas ocultas del home, así
+    /// que `~/.local/share/...` le está vedado y arrancaría con error. Los snaps sí pueden
+    /// escribir en su propia carpeta `~/snap/&lt;nombre&gt;/common`.
+    /// </summary>
+    internal static string CarpetaPerfil(string navegador, string datosLocales, string home)
+    {
+        const string RaizSnap = "/snap/bin/";
+
+        if (navegador.StartsWith(RaizSnap, StringComparison.Ordinal))
+        {
+            var snap = navegador[RaizSnap.Length..];
+
+            return $"{home.TrimEnd('/')}/snap/{snap}/common/GestorInve";
+        }
+
+        return Path.Combine(datosLocales, "GestorInve", "perfil");
     }
 
     /// <summary>El primer candidato que existe, o <c>null</c> si no hay ningún navegador Chromium.</summary>

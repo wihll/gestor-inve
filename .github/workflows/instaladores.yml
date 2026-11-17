@@ -304,7 +304,12 @@ jobs:
         run: |
           set -euo pipefail
           (cd instaladores && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
-          gh release create "$GITHUB_REF_NAME" instaladores/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "gestor-inve ${GITHUB_REF_NAME#v}" \
-            --notes "Instaladores de escritorio. Windows: ejecute el \`-setup.exe\`. Linux (Ubuntu/Debian): \`sudo apt install ./gestor-inve_*.deb\`. El instalador de Windows no está firmado: SmartScreen pedirá «Más información → Ejecutar de todas formas». Guía: brain/runbooks/instalacion-escritorio.md"
+          # Tolerante: si el Release ya existe (creado a mano desde la web), solo se le suben los
+          # instaladores. Así la etiqueta puede nacer del workflow o de una persona.
+          if ! gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$GITHUB_REF_NAME" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "gestor-inve ${GITHUB_REF_NAME#v}" \
+              --notes "Instaladores de escritorio. **Ubuntu/Debian:** \`sudo apt install ./gestor-inve_*.deb\`. **Windows:** ejecute el \`-setup.exe\` (no está firmado: SmartScreen pedirá «Más información → Ejecutar de todas formas»). Guía completa: brain/runbooks/instalacion-escritorio.md"
+          fi
+          gh release upload "$GITHUB_REF_NAME" instaladores/* --repo "$GITHUB_REPOSITORY" --clobber
