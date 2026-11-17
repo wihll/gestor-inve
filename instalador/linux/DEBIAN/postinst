@@ -63,6 +63,25 @@ ENV
     chmod 600 "$ENTORNO"
 fi
 
+# Reparación: el rol y la base tienen que existir y coincidir con el archivo de secretos, también
+# en una actualización. Si se restauró una copia, se borró el rol o se le cambió la contraseña,
+# el servicio no arrancaría y el usuario no tendría forma de saber por qué. Reinstalar lo arregla.
+clave_guardada="$(sed -n 's/^ConnectionStrings__GestorInve=.*Password=\([0-9a-f]*\).*$/\1/p' "$ENTORNO")"
+
+if [ -n "$clave_guardada" ]; then
+    if [ "$(sql "-c \"select count(*) from pg_roles where rolname = 'gestorinve'\"")" = "0" ]; then
+        sql "-c \"create role gestorinve login password '$clave_guardada' nosuperuser nocreatedb nocreaterole noinherit nobypassrls\""
+    else
+        # Solo la contraseña: los privilegios no se tocan aquí, para que la comprobación de
+        # abajo siga pudiendo detectar un rol que alguien dejó privilegiado.
+        sql "-c \"alter role gestorinve login password '$clave_guardada'\"" > /dev/null
+    fi
+
+    if [ "$(sql "-c \"select count(*) from pg_database where datname = 'gestorinve'\"")" = "0" ]; then
+        sql "-c 'create database gestorinve owner gestorinve'"
+    fi
+fi
+
 # Comprobación en la propia instalación, no solo en el CI: si el rol quedó con privilegios,
 # la instalación falla aquí en vez de dejar el aislamiento anulado en silencio.
 if [ "$(sql "-c \"select rolsuper or rolbypassrls from pg_roles where rolname = 'gestorinve'\"")" != "f" ]; then
