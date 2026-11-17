@@ -37,5 +37,9 @@ Un cambio que debilite cualquiera de estos puntos requiere un ADR que lo justifi
 | Mercancía vencida | Una salida de un lote vencido se rechaza; la baja solo entra como ajuste negativo, y FEFO no elige lotes vencidos | `LotesTests` |
 | Seriales | Cantidad exactamente 1, y un serial no puede tener existencia en dos celdas | `LotesTests` |
 | Rutas del SPA y de la Api | La Api vive bajo `/api`; abrir una ruta del enrutador del cliente directamente la sirve el servidor web, no la Api | Prueba e2e «ruta del SPA» + job `compose` |
+| Instaladores ejecutados | El `.deb` y el `setup.exe` se **instalan** en el runner: sistema arriba, alta 201, actualización que conserva datos y secretos, desinstalación que conserva los datos | Workflow `Instaladores` |
+| Instalación local sin exposición | Servicio y base escuchan solo en `127.0.0.1`; servicios sin privilegios; secretos generados por instalación y no legibles por los usuarios del equipo | Workflow `Instaladores` |
+| Frontera web/Api | Con la Api sirviendo la web, una ruta inexistente bajo `/api` sigue siendo 404 | `WebEstaticaTests` |
+| Lanzador | Solo abre direcciones locales, con perfil de navegador propio | `NavegadorTests` |
 | Despliegue ejecutable | El `docker-compose.yml` se construye y se levanta en cada PR; la web y la Api responden en el mismo origen | Job `compose` del CI |
 | Análisis de seguridad | CodeQL con `security-extended` sobre C#, TypeScript y los propios workflows | `codeql.yml`, semanal y por PR |

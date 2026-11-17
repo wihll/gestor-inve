@@ -32,7 +32,7 @@ jobs:
         run: |
           # Las pruebas fallidas se emiten como anotaciones: el registro completo del job no
           # siempre es legible desde fuera, y «exit code 1» no dice qué prueba se rompió.
-          set -uo pipefail
+          set +e -uo pipefail
           dotnet test --no-build --filter "Categoria!=Integracion" 2>&1 | tee unitarias.log
           estado=${PIPESTATUS[0]}
           if [ "$estado" -ne 0 ]; then
@@ -98,7 +98,9 @@ jobs:
         run: |
           # `dotnet test` sale en 0 cuando el filtro no encuentra nada: sin este guardia, renombrar
           # la etiqueta dejaría las pruebas de aislamiento sin ejecutar y el CI seguiría verde.
-          set -uo pipefail
+          # `set +e` explícito: Actions lanza el paso con `bash -e`, y con él el script moriría
+          # en la línea de las pruebas, antes de poder decir cuál falló.
+          set +e -uo pipefail
           dotnet test --no-build --filter "Categoria=Integracion" 2>&1 | tee integracion.log
           estado=${PIPESTATUS[0]}
           if [ "$estado" -ne 0 ]; then
